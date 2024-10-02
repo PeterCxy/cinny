@@ -156,6 +156,9 @@ export const BubbleContent = style({
       // so we highlight the bubble as well when hover
       backgroundColor: color.SurfaceVariant.ContainerHover,
     },
+    [`${SelectedVariant.true} &`]: {
+      backgroundColor: color.SurfaceVariant.ContainerActive,
+    },
   },
 });
 
