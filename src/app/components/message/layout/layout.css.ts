@@ -79,6 +79,14 @@ const AutoCollapse = style({
   },
 });
 
+const HoverHighlight = style({
+  selectors: {
+    '&:hover': {
+      backgroundColor: color.Surface.ContainerHover,
+    },
+  },
+});
+
 export const MessageBase = recipe({
   base: [
     DefaultReset,
@@ -87,6 +95,7 @@ export const MessageBase = recipe({
       padding: `${config.space.S100} ${config.space.S200} ${config.space.S100} ${config.space.S400}`,
       borderRadius: `0 ${config.radii.R400} ${config.radii.R400} 0`,
     },
+    HoverHighlight,
   ],
   variants: {
     space: SpacingVariant,
@@ -141,6 +150,13 @@ export const BubbleContent = style({
   backgroundColor: color.SurfaceVariant.Container,
   color: color.SurfaceVariant.OnContainer,
   borderRadius: config.radii.R400,
+  selectors: {
+    [`${HoverHighlight}:hover &`]: {
+      // Surface.ContainerHover can look the same as SurfaceVariant.Container
+      // so we highlight the bubble as well when hover
+      backgroundColor: color.SurfaceVariant.ContainerHover,
+    },
+  },
 });
 
 export const Username = style({
