@@ -208,7 +208,8 @@
 }
 
 .dark-theme,
-.butter-theme {
+.butter-theme,
+.gruvbox-theme {
   /* background color | --bg-[background type]: value */
   --bg-surface: #262626;
   --bg-surface-transparent: #26262600;
@@ -353,6 +354,87 @@
   --ic-surface-high: rgb(255, 251, 222);
   --ic-surface-normal: rgba(255, 251, 222, 84%);
   --ic-surface-low: rgba(255, 251, 222, 64%);
+}
+
+.gruvbox-theme {
+  /* background color | --bg-[background type]: value */
+  --bg-surface: #3c3836;
+  --bg-surface-transparent: #3c383600;
+  --bg-surface-low: #282828;
+  --bg-surface-low-transparent: #28282800;
+  --bg-surface-extra-low: #282828;
+  --bg-surface-extra-low-transparent: #282828;
+  --bg-surface-hover: #504945;
+  --bg-surface-active: #665c54;
+  --bg-surface-border: #665c54;
+
+  --bg-primary: rgb(211, 134, 155);
+  --bg-primary-hover: rgba(211, 134, 155, 0.8);
+  --bg-primary-active: rgba(211, 134, 155, 70%);
+  --bg-primary-border: rgba(211, 134, 155, 38%);
+
+  --bg-positive: rgb(251, 241, 199);
+  --bg-positive-hover: rgba(251, 241, 199, 8%);
+  --bg-positive-active: rgba(251, 241, 199, 15%);
+  --bg-positive-border: rgba(251, 241, 199, 40%);
+
+  --bg-caution: rgb(250, 189, 47);
+  --bg-caution-hover: rgba(250, 189, 47, 8%);
+  --bg-caution-active: rgba(250, 189, 47, 15%);
+  --bg-caution-border: rgba(250, 189, 47, 40%);
+
+  --bg-danger: rgb(251, 73, 52);
+  --bg-danger-hover: rgba(251, 73, 52, 5%);
+  --bg-danger-active: rgba(251, 73, 52, 10%);
+  --bg-danger-border: rgba(251, 73, 52, 20%);
+
+  --bg-badge: #d5c4a1;
+
+  /* text color | --tc-[background type]-[priority]: value */
+  --tc-surface-high: rgb(251, 241, 199);
+  --tc-surface-normal: rgba(251, 241, 199, 94%);
+  --tc-surface-normal-low: rgba(251, 241, 199, 60%);
+  --tc-surface-low: rgba(251, 241, 199, 58%);
+
+  --tc-danger-high: var(--bg-danger);
+  --tc-danger-normal: rgba(251, 73, 52, 88%);
+  --tc-danger-low: rgba(251, 73, 52, 60%);
+
+  --bs-surface-border: inset 0 0 0 1px var(--bg-surface-border);
+  --bs-surface-outline: 0 0 0 2px var(--bg-surface-border);
+
+  --bs-primary-border: inset 0 0 0 1px var(--bg-primary-border);
+  --bs-primary-outline: 0 0 0 2px var(--bg-primary-border);
+
+  --bs-positive-border: inset 0 0 0 1px var(--bg-positive-border);
+  --bs-positive-outline: 0 0 0 2px var(--bg-positive-border);
+
+  --bs-caution-border: inset 0 0 0 1px var(--bg-caution-border);
+  --bs-caution-outline: 0 0 0 2px var(--bg-caution-border);
+
+  --bs-danger-border: inset 0 0 0 1px var(--bg-danger-border);
+  --bs-danger-outline: 0 0 0 2px var(--bg-danger-border);
+
+  /* system icons | --ic-[background type]-[priority]: value */
+  --ic-surface-high: rgb(251, 241, 199);
+  --ic-surface-normal: rgba(251, 241, 199, 84%);
+  --ic-surface-low: rgba(251, 241, 199, 64%);
+
+  --ic-positive-high: rgba(251, 241, 199);
+  --ic-positive-normal: rgba(251, 241, 199, 80%);
+  --ic-caution-high: rgba(250, 189, 47);
+  --ic-caution-normal: rgba(250, 189, 47, 80%);
+  --ic-danger-high: rgba(251, 73, 52);
+  --ic-danger-normal: rgba(251, 73, 52, 0.7);
+
+  --mx-uc-1: #83a598;
+  --mx-uc-2: #d3869b;
+  --mx-uc-3: #8ec07c;
+  --mx-uc-4: #fb4934;
+  --mx-uc-5: #fe8019;
+  --mx-uc-6: #458588;
+  --mx-uc-7: #b16286;
+  --mx-uc-8: #b8bb26;
 }
 
 .font-primary {

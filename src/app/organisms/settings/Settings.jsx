@@ -118,6 +118,7 @@ function AppearanceSection() {
                 { text: 'Silver' },
                 { text: 'Dark' },
                 { text: 'Butter' },
+                { text: 'Gruvbox' },
               ]}
               onSelect={(index) => {
                 if (settings.useSystemTheme) toggleSystemTheme();

@@ -236,3 +236,95 @@ export const butterTheme = createTheme(color, {
     OnContainer: '#F2EED3',
   },
 });
+
+export const gruvboxTheme = createTheme(color, {
+  ...darkThemeData,
+  Background: {
+    Container: '#282828',
+    ContainerHover: '#3C3836',
+    ContainerActive: '#504945',
+    ContainerLine: '#665C54',
+    OnContainer: '#FBF1C7',
+  },
+
+  Surface: {
+    Container: '#3C3836',
+    ContainerHover: '#504945',
+    ContainerActive: '#665C54',
+    ContainerLine: '#7C6F64',
+    OnContainer: '#FBF1C7',
+  },
+
+  SurfaceVariant: {
+    Container: '#504945',
+    ContainerHover: '#665C54',
+    ContainerActive: '#7C6F64',
+    ContainerLine: '#928374',
+    OnContainer: '#FBF1C7',
+  },
+
+  Primary: {
+    Main: '#D3869B',
+    MainHover: '#B16286',
+    MainActive: '#B06080',
+    MainLine: '#A15276',
+    OnMain: '#1D2021',
+    Container: '#6F2237',
+    ContainerHover: '#83364B',
+    ContainerActive: '#974A5F',
+    ContainerLine: '#B55E73',
+    OnContainer: '#FBF1C7',
+  },
+
+  Secondary: {
+    Main: '#FBF1C7',
+    MainHover: '#EBDBB2',
+    MainActive: '#D5C4A1',
+    MainLine: '#BDAE93',
+    OnMain: '#1D2021',
+    Container: '#282828',
+    ContainerHover: '#3C3836',
+    ContainerActive: '#504945',
+    ContainerLine: '#665C54',
+    OnContainer: '#FBF1C7',
+  },
+
+  Warning: {
+    Main: '#FABD2F',
+    MainHover: '#D79921',
+    MainActive: '#CD8F17',
+    MainLine: '#B97B03',
+    OnMain: '#000000',
+    Container: '#AF7103',
+    ContainerHover: '#A56703',
+    ContainerActive: '#915300',
+    ContainerLine: '#804300',
+    OnContainer: '#FBF1C7',
+  },
+
+  Success: {
+    Main: '#8EC07C',
+    MainHover: '#689D6A',
+    MainActive: '#5E9360',
+    MainLine: '#548956',
+    OnMain: '#000000',
+    Container: '#4A7F4C',
+    ContainerHover: '#407542',
+    ContainerActive: '#2C612E',
+    ContainerLine: '#206020',
+    OnContainer: '#FBF1C7',
+  },
+
+  Critical: {
+    Main: '#FB4934',
+    MainHover: '#CC241D',
+    MainActive: '#C21A13',
+    MainLine: '#A40600',
+    OnMain: '#000000',
+    Container: '#900000',
+    ContainerHover: '#7C0000',
+    ContainerActive: '#680000',
+    ContainerLine: '#500000',
+    OnContainer: '#FBF1C7',
+  },
+});

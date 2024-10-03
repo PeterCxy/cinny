@@ -3,7 +3,7 @@ import EventEmitter from 'events';
 import appDispatcher from '../dispatcher';
 
 import cons from './cons';
-import { darkTheme, butterTheme, silverTheme } from '../../colors.css';
+import { darkTheme, butterTheme, silverTheme, gruvboxTheme } from '../../colors.css';
 import { onLightFontWeight, onDarkFontWeight } from '../../config.css';
 
 function getSettings() {
@@ -23,9 +23,14 @@ class Settings extends EventEmitter {
   constructor() {
     super();
 
-    this.themeClasses = [lightTheme, silverTheme, darkTheme, butterTheme];
-    this.fontWeightClasses = [onLightFontWeight, onLightFontWeight, onDarkFontWeight, onDarkFontWeight]
-    this.themes = ['', 'silver-theme', 'dark-theme', 'butter-theme'];
+    this.themeClasses = [lightTheme, silverTheme, darkTheme, butterTheme, gruvboxTheme];
+    this.fontWeightClasses = [
+      onLightFontWeight,
+      onLightFontWeight,
+      onDarkFontWeight,
+      onDarkFontWeight,
+    ];
+    this.themes = ['', 'silver-theme', 'dark-theme', 'butter-theme', 'gruvbox-theme'];
     this.themeIndex = this.getThemeIndex();
 
     this.useSystemTheme = this.getUseSystemTheme();
@@ -36,9 +41,10 @@ class Settings extends EventEmitter {
 
     this.darkModeQueryList = window.matchMedia('(prefers-color-scheme: dark)');
 
-    this.darkModeQueryList.addEventListener('change', () => this.applyTheme())
+    this.darkModeQueryList.addEventListener('change', () => this.applyTheme());
 
-    this.isTouchScreenDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0);
+    this.isTouchScreenDevice =
+      'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
   }
 
   getThemeIndex() {
@@ -60,8 +66,8 @@ class Settings extends EventEmitter {
       if (themeName !== '') document.body.classList.remove(themeName);
       document.body.classList.remove(this.themeClasses[index]);
       document.body.classList.remove(this.fontWeightClasses[index]);
-      document.body.classList.remove('prism-light')
-      document.body.classList.remove('prism-dark')
+      document.body.classList.remove('prism-light');
+      document.body.classList.remove('prism-dark');
     });
   }
 
@@ -69,7 +75,7 @@ class Settings extends EventEmitter {
     this._clearTheme();
     const autoThemeIndex = this.darkModeQueryList.matches ? 2 : 0;
     const themeIndex = this.useSystemTheme ? autoThemeIndex : this.themeIndex;
-    if (this.themes[themeIndex] === undefined) return
+    if (this.themes[themeIndex] === undefined) return;
     if (this.themes[themeIndex]) document.body.classList.add(this.themes[themeIndex]);
     document.body.classList.add(this.themeClasses[themeIndex]);
     document.body.classList.add(this.fontWeightClasses[themeIndex]);
