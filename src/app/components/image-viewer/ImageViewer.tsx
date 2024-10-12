@@ -16,7 +16,7 @@ export type ImageViewerProps = {
 
 export const ImageViewer = as<'div', ImageViewerProps>(
   ({ className, alt, src, requestClose, ...props }, ref) => {
-    const { zoom, zoomIn, zoomOut, setZoom } = useZoom(0.2);
+    const { zoom, zoomIn, zoomOut, setZoom, onWheel } = useZoom(0.2);
     const { pan, cursor, onMouseDown } = usePan(zoom !== 1);
 
     const handleDownload = async () => {
@@ -88,6 +88,7 @@ export const ImageViewer = as<'div', ImageViewerProps>(
             }}
             src={src}
             alt={alt}
+            onWheel={onWheel}
             onMouseDown={onMouseDown}
           />
         </Box>
