@@ -84,7 +84,7 @@ export const ImageViewer = as<'div', ImageViewerProps>(
             className={css.ImageViewerImg}
             style={{
               cursor,
-              transform: `scale(${zoom}) translate(${pan.translateX}px, ${pan.translateY}px)`,
+              transform: `translate(${pan.translateX}px, ${pan.translateY}px) scale(${zoom})`,
             }}
             src={src}
             alt={alt}
