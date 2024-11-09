@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import * as zip from '@zip.js/zip.js';
 import { retryNetworkOperation } from 'matrix-js-sdk';
+import { v4 as uuidv4 } from 'uuid';
 import Spinner from '../../atoms/spinner/Spinner';
 import { openReusableDialog } from '../../../client/action/navigation';
 import './ImagePackBatchImportDialog.scss';
@@ -36,7 +37,7 @@ function sortByShortcode(a, b) {
 function ImagePackBatchImportDialog({ getFile, packName, requestClose, onImport }) {
   const mx = useMatrixClient();
   const [entries, setEntries] = useState([]);
-  const [entryStateByShortcode, setEntryStateByShortcode] = useState({});
+  const [entryStateByUUID, setEntryStateByUUID] = useState({});
   const [uploading, setUploading] = useState(false);
   const lastUploadingRef = useRef(null);
 
@@ -50,6 +51,7 @@ function ImagePackBatchImportDialog({ getFile, packName, requestClose, onImport 
           .map(async (entry) => {
             const data = await entry.getData(new zip.BlobWriter(getFileNameExt(entry.filename)));
             return {
+              uuid: uuidv4(),
               shortcode: nameToShortcode(entry.filename),
               data,
               dataUri: URL.createObjectURL(data),
@@ -70,9 +72,9 @@ function ImagePackBatchImportDialog({ getFile, packName, requestClose, onImport 
     setUploading(true);
     // eslint-disable-next-line no-restricted-syntax
     for await (const entry of entries) {
-      setEntryStateByShortcode((states) => {
+      setEntryStateByUUID((states) => {
         const newStates = { ...states };
-        newStates[entry.shortcode] = 'uploading';
+        newStates[entry.uuid] = 'uploading';
         return newStates;
       });
       const image = await scaleDownImage(entry.data, 512, 512);
@@ -81,17 +83,17 @@ function ImagePackBatchImportDialog({ getFile, packName, requestClose, onImport 
           const { content_uri: url } = await mx.uploadContent(image);
 
           onImport(entry.shortcode, url);
-          setEntryStateByShortcode((states) => {
+          setEntryStateByUUID((states) => {
             const newStates = { ...states };
-            newStates[entry.shortcode] = 'uploaded';
+            newStates[entry.uuid] = 'uploaded';
             return newStates;
           });
         });
       } catch (e) {
         failedEntries.push(entry);
-        setEntryStateByShortcode((states) => {
+        setEntryStateByUUID((states) => {
           const newStates = { ...states };
-          newStates[entry.shortcode] = 'failed';
+          newStates[entry.uuid] = 'failed';
           return newStates;
         });
       }
@@ -109,7 +111,7 @@ function ImagePackBatchImportDialog({ getFile, packName, requestClose, onImport 
     if (lastUploadingRef.current !== null) {
       lastUploadingRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }
-  }, [entryStateByShortcode]);
+  }, [entryStateByUUID]);
 
   return (
     <div className="image-pack-batch-import-dialog">
@@ -129,7 +131,7 @@ function ImagePackBatchImportDialog({ getFile, packName, requestClose, onImport 
             <Text variant="b3">Status</Text>
           </div>
           {entries.map((entry) => {
-            const state = entryStateByShortcode[entry.shortcode];
+            const state = entryStateByUUID[entry.uuid];
             return (
               <ImagePackItem
                 shortcode={entry.shortcode}
