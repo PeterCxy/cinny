@@ -279,6 +279,7 @@ function ImagePack({ roomId, stateKey, handlePackDelete }) {
         displayName={pack.displayName ?? 'Unknown'}
         attribution={pack.attribution}
         usage={getUsage(pack.usage)}
+        onImport={handleAddItem}
         onUsageChange={canChange ? handleUsageChange : null}
         onAvatarChange={canChange ? handleAvatarChange : null}
         onEditProfile={canChange ? handleEditProfile : null}

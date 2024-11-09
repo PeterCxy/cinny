@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import './ImagePackProfile.scss';
 
@@ -15,10 +15,17 @@ import ImagePackUsageSelector from './ImagePackUsageSelector';
 
 import ChevronBottomIC from '../../../../public/res/ic/outlined/chevron-bottom.svg';
 import PencilIC from '../../../../public/res/ic/outlined/pencil.svg';
+import { imagePackBatchImportDialog } from './ImagePackBatchImportDialog';
 
 function ImagePackProfile({
-  avatarUrl, displayName, attribution, usage,
-  onUsageChange, onAvatarChange, onEditProfile,
+  avatarUrl,
+  displayName,
+  attribution,
+  usage,
+  onUsageChange,
+  onAvatarChange,
+  onEditProfile,
+  onImport,
 }) {
   const [isEdit, setIsEdit] = useState(false);
 
@@ -34,59 +41,78 @@ function ImagePackProfile({
   };
 
   const handleUsageSelect = (event) => {
-    openReusableContextMenu(
-      'bottom',
-      getEventCords(event, '.btn-surface'),
-      (closeMenu) => (
-        <ImagePackUsageSelector
-          usage={usage}
-          onSelect={(newUsage) => {
-            onUsageChange(newUsage);
-            closeMenu();
-          }}
-        />
-      ),
-    );
+    openReusableContextMenu('bottom', getEventCords(event, '.btn-surface'), (closeMenu) => (
+      <ImagePackUsageSelector
+        usage={usage}
+        onSelect={(newUsage) => {
+          onUsageChange(newUsage);
+          closeMenu();
+        }}
+      />
+    ));
+  };
+
+  const batchImportRef = useRef(null);
+
+  const getBatchImportFile = useMemo(() => () => batchImportRef.current.files[0], []);
+
+  const handleBatchImport = (event) => {
+    event.preventDefault();
+    imagePackBatchImportDialog(getBatchImportFile, displayName, onImport);
   };
 
   return (
     <div className="image-pack-profile">
-      {
-        onAvatarChange
-          ? (
-            <ImageUpload
-              bgColor="#555"
-              text={displayName}
-              imageSrc={avatarUrl}
-              size="normal"
-              onUpload={onAvatarChange}
-              onRequestRemove={() => onAvatarChange(undefined)}
-            />
-          )
-          : <Avatar bgColor="#555" text={displayName} imageSrc={avatarUrl} size="normal" />
-      }
+      {onAvatarChange ? (
+        <ImageUpload
+          bgColor="#555"
+          text={displayName}
+          imageSrc={avatarUrl}
+          size="normal"
+          onUpload={onAvatarChange}
+          onRequestRemove={() => onAvatarChange(undefined)}
+        />
+      ) : (
+        <Avatar bgColor="#555" text={displayName} imageSrc={avatarUrl} size="normal" />
+      )}
       <div className="image-pack-profile__content">
-        {
-          isEdit
-            ? (
-              <form onSubmit={handleSubmit}>
-                <Input name="nameInput" label="Name" value={displayName} required />
-                <Input name="attributionInput" label="Attribution" value={attribution} resizable />
-                <div>
-                  <Button variant="primary" type="submit">Save</Button>
-                  <Button onClick={() => setIsEdit(false)}>Cancel</Button>
-                </div>
-              </form>
-            ) : (
-              <>
-                <div>
-                  <Text>{displayName}</Text>
-                  {onEditProfile && <IconButton size="extra-small" onClick={() => setIsEdit(true)} src={PencilIC} tooltip="Edit" />}
-                </div>
-                {attribution && <Text variant="b3">{attribution}</Text>}
-              </>
-            )
-        }
+        {isEdit ? (
+          <form onSubmit={handleSubmit}>
+            <Input name="nameInput" label="Name" value={displayName} required />
+            <Input name="attributionInput" label="Attribution" value={attribution} resizable />
+            <div>
+              <Button variant="primary" type="submit">
+                Save
+              </Button>
+              <Button onClick={() => setIsEdit(false)}>Cancel</Button>
+            </div>
+          </form>
+        ) : (
+          <>
+            <div>
+              <Text>{displayName}</Text>
+              {onEditProfile && (
+                <IconButton
+                  size="extra-small"
+                  onClick={() => setIsEdit(true)}
+                  src={PencilIC}
+                  tooltip="Edit"
+                />
+              )}
+            </div>
+            {attribution && <Text variant="b3">{attribution}</Text>}
+          </>
+        )}
+      </div>
+      <div className="image-pack-batch-import">
+        <input
+          style={{ display: 'none' }}
+          ref={batchImportRef}
+          onChange={handleBatchImport}
+          type="file"
+          accept="application/zip"
+        />
+        <Button onClick={() => batchImportRef.current.click()}>Batch import</Button>
       </div>
       <div className="image-pack-profile__usage">
         <Text variant="b3">Pack usage</Text>
@@ -111,6 +137,7 @@ ImagePackProfile.defaultProps = {
   onUsageChange: null,
   onAvatarChange: null,
   onEditProfile: null,
+  onImport: null,
 };
 ImagePackProfile.propTypes = {
   avatarUrl: PropTypes.string,
@@ -120,6 +147,7 @@ ImagePackProfile.propTypes = {
   onUsageChange: PropTypes.func,
   onAvatarChange: PropTypes.func,
   onEditProfile: PropTypes.func,
+  onImport: PropTypes.func,
 };
 
 export default ImagePackProfile;

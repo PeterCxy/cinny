@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { forwardRef } from 'react';
 import PropTypes from 'prop-types';
 import './ImagePackItem.scss';
 
@@ -16,14 +16,10 @@ import ChevronBottomIC from '../../../../public/res/ic/outlined/chevron-bottom.s
 import PencilIC from '../../../../public/res/ic/outlined/pencil.svg';
 import BinIC from '../../../../public/res/ic/outlined/bin.svg';
 
-function ImagePackItem({
-  url, shortcode, usage, onUsageChange, onDelete, onRename,
-}) {
-  const handleUsageSelect = (event) => {
-    openReusableContextMenu(
-      'bottom',
-      getEventCords(event, '.btn-surface'),
-      (closeMenu) => (
+const ImagePackItem = forwardRef(
+  ({ url, shortcode, usage, onUsageChange, onDelete, onRename, renderExtraStatus }, ref) => {
+    const handleUsageSelect = (event) => {
+      openReusableContextMenu('bottom', getEventCords(event, '.btn-surface'), (closeMenu) => (
         <ImagePackUsageSelector
           usage={usage}
           onSelect={(newUsage) => {
@@ -31,33 +27,50 @@ function ImagePackItem({
             closeMenu();
           }}
         />
-      ),
-    );
-  };
+      ));
+    };
 
-  return (
-    <div className="image-pack-item">
-      <Avatar imageSrc={url} size="extra-small" text={shortcode} bgColor="black" />
-      <div className="image-pack-item__content">
-        <Text>{shortcode}</Text>
-      </div>
-      <div className="image-pack-item__usage">
-        <div className="image-pack-item__btn">
-          {onRename && <IconButton tooltip="Rename" size="extra-small" src={PencilIC} onClick={() => onRename(shortcode)} />}
-          {onDelete && <IconButton tooltip="Delete" size="extra-small" src={BinIC} onClick={() => onDelete(shortcode)} />}
+    return (
+      <div className="image-pack-item" ref={ref}>
+        <Avatar imageSrc={url} size="extra-small" text={shortcode} bgColor="black" />
+        <div className="image-pack-item__content">
+          <Text>{shortcode}</Text>
         </div>
-        <Button onClick={onUsageChange ? handleUsageSelect : undefined}>
-          {onUsageChange && <RawIcon src={ChevronBottomIC} size="extra-small" />}
-          <Text variant="b2">
-            {usage === 'emoticon' && 'Emoji'}
-            {usage === 'sticker' && 'Sticker'}
-            {usage === 'both' && 'Both'}
-          </Text>
-        </Button>
+        <div className="image-pack-item__usage">
+          <div className="image-pack-item__btn">
+            {onRename && (
+              <IconButton
+                tooltip="Rename"
+                size="extra-small"
+                src={PencilIC}
+                onClick={() => onRename(shortcode)}
+              />
+            )}
+            {onDelete && (
+              <IconButton
+                tooltip="Delete"
+                size="extra-small"
+                src={BinIC}
+                onClick={() => onDelete(shortcode)}
+              />
+            )}
+          </div>
+          {usage && (
+            <Button onClick={onUsageChange ? handleUsageSelect : undefined}>
+              {onUsageChange && <RawIcon src={ChevronBottomIC} size="extra-small" />}
+              <Text variant="b2">
+                {usage === 'emoticon' && 'Emoji'}
+                {usage === 'sticker' && 'Sticker'}
+                {usage === 'both' && 'Both'}
+              </Text>
+            </Button>
+          )}
+          {renderExtraStatus && renderExtraStatus()}
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
+);
 
 ImagePackItem.defaultProps = {
   onUsageChange: null,
@@ -71,6 +84,7 @@ ImagePackItem.propTypes = {
   onUsageChange: PropTypes.func,
   onDelete: PropTypes.func,
   onRename: PropTypes.func,
+  renderExtraStatus: PropTypes.func,
 };
 
 export default ImagePackItem;
