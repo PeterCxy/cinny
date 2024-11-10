@@ -36,7 +36,7 @@ function sortByShortcode(a, b) {
 
 function ImagePackBatchImportDialog({ getFiles, packName, requestClose, onImport }) {
   const mx = useMatrixClient();
-  const [entries, setEntries] = useState([]);
+  const [entries, setEntries] = useState(null);
   const [entryStateByUUID, setEntryStateByUUID] = useState({});
   const [uploading, setUploading] = useState(false);
   const lastUploadingRef = useRef(null);
@@ -143,46 +143,58 @@ function ImagePackBatchImportDialog({ getFiles, packName, requestClose, onImport
 
   return (
     <div className="image-pack-batch-import-dialog">
-      {entries.length === 0 ? (
-        <Spinner size="normal" />
-      ) : (
-        <>
-          <Text variant="b1" weight="light">
-            Import {entries.length} items into pack {packName}?
-          </Text>
-          <Button variant="primary" disabled={uploading} onClick={doUpload}>
-            Import
-          </Button>
-          <div className="image-pack__header" style={{ marginTop: '1em' }}>
-            <Text variant="b3">Image</Text>
-            <Text variant="b3">Shortcode</Text>
-            <Text variant="b3">Status</Text>
-          </div>
-          {entries.map((entry) => {
-            const state = entryStateByUUID[entry.uuid];
-            return (
-              <ImagePackItem
-                shortcode={entry.shortcode}
-                url={entry.dataUri}
-                ref={state === 'uploading' ? lastUploadingRef : null}
-                renderExtraStatus={() => {
-                  if (state === 'uploading') {
-                    return <Spinner size="small" />;
-                  }
-                  if (state === 'uploaded') {
-                    return <RawIcon size="small" src={CheckIC} />;
-                  }
-                  if (state === 'failed') {
-                    return <RawIcon size="small" src={InfoIC} />;
-                  }
+      {(() => {
+        if (entries == null) {
+          return <Spinner size="normal" />;
+        }
+        if (entries.length === 0) {
+          return (
+            <Text variant="b1" weight="light">
+              Unable to load stickers from your selected files. Please make sure you have selected
+              valid images or zip archives of images.
+            </Text>
+          );
+        }
 
-                  return null;
-                }}
-              />
-            );
-          })}
-        </>
-      )}
+        return (
+          <>
+            <Text variant="b1" weight="light">
+              Import {entries.length} items into pack {packName}?
+            </Text>
+            <Button variant="primary" disabled={uploading} onClick={doUpload}>
+              Import
+            </Button>
+            <div className="image-pack__header" style={{ marginTop: '1em' }}>
+              <Text variant="b3">Image</Text>
+              <Text variant="b3">Shortcode</Text>
+              <Text variant="b3">Status</Text>
+            </div>
+            {entries.map((entry) => {
+              const state = entryStateByUUID[entry.uuid];
+              return (
+                <ImagePackItem
+                  shortcode={entry.shortcode}
+                  url={entry.dataUri}
+                  ref={state === 'uploading' ? lastUploadingRef : null}
+                  renderExtraStatus={() => {
+                    if (state === 'uploading') {
+                      return <Spinner size="small" />;
+                    }
+                    if (state === 'uploaded') {
+                      return <RawIcon size="small" src={CheckIC} />;
+                    }
+                    if (state === 'failed') {
+                      return <RawIcon size="small" src={InfoIC} />;
+                    }
+
+                    return null;
+                  }}
+                />
+              );
+            })}
+          </>
+        );
+      })()}
     </div>
   );
 }
