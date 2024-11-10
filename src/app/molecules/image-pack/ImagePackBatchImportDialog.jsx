@@ -62,7 +62,11 @@ function ImagePackBatchImportDialog({ getFiles, packName, requestClose, onImport
     }
 
     async function loadFile(file) {
-      if (file.type === 'application/zip') {
+      if (
+        file.name.endsWith('.zip') ||
+        file.type === 'application/zip' ||
+        file.type === 'application/x-zip-compressed'
+      ) {
         return loadZipFile(file);
       }
 
