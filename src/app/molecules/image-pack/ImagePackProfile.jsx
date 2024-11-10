@@ -54,11 +54,11 @@ function ImagePackProfile({
 
   const batchImportRef = useRef(null);
 
-  const getBatchImportFile = useMemo(() => () => batchImportRef.current.files[0], []);
+  const getBatchImportFiles = useMemo(() => () => batchImportRef.current.files, []);
 
   const handleBatchImport = (event) => {
     event.preventDefault();
-    imagePackBatchImportDialog(getBatchImportFile, displayName, onImport);
+    imagePackBatchImportDialog(getBatchImportFiles, displayName, onImport);
   };
 
   return (
@@ -110,7 +110,8 @@ function ImagePackProfile({
           ref={batchImportRef}
           onChange={handleBatchImport}
           type="file"
-          accept="application/zip"
+          accept="application/zip, image/*"
+          multiple
         />
         <Button onClick={() => batchImportRef.current.click()}>Batch import</Button>
       </div>

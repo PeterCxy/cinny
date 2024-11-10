@@ -34,7 +34,7 @@ function sortByShortcode(a, b) {
   return 1;
 }
 
-function ImagePackBatchImportDialog({ getFile, packName, requestClose, onImport }) {
+function ImagePackBatchImportDialog({ getFiles, packName, requestClose, onImport }) {
   const mx = useMatrixClient();
   const [entries, setEntries] = useState([]);
   const [entryStateByUUID, setEntryStateByUUID] = useState({});
@@ -42,10 +42,10 @@ function ImagePackBatchImportDialog({ getFile, packName, requestClose, onImport 
   const lastUploadingRef = useRef(null);
 
   useEffect(() => {
-    async function reload() {
-      const reader = new zip.ZipReader(new zip.BlobReader(getFile()));
+    async function loadZipFile(file) {
+      const reader = new zip.ZipReader(new zip.BlobReader(file));
       const rawEntries = await reader.getEntries();
-      const newEntries = await Promise.all(
+      const zipEntries = await Promise.all(
         rawEntries
           .filter((entry) => isValidImage(entry.filename))
           .map(async (entry) => {
@@ -55,17 +55,41 @@ function ImagePackBatchImportDialog({ getFile, packName, requestClose, onImport 
               shortcode: nameToShortcode(entry.filename),
               data,
               dataUri: URL.createObjectURL(data),
-              entry,
             };
           })
       );
-      newEntries.sort(sortByShortcode);
+      return zipEntries;
+    }
 
+    async function loadFile(file) {
+      if (file.type === 'application/zip') {
+        return loadZipFile(file);
+      }
+
+      // If this is not a zip archive, it MUST be of an image MIME type
+      if (!file.type.startsWith('image/')) {
+        return [];
+      }
+
+      return {
+        uuid: uuidv4(),
+        shortcode: nameToShortcode(file.name),
+        data: file,
+        dataUri: URL.createObjectURL(file),
+      };
+    }
+
+    async function reload() {
+      // Load the file; since archives may contain multiple entries, we need to flatten the array
+      const newEntries = (
+        await Promise.all(Array.from(getFiles()).map((file) => loadFile(file)))
+      ).flat(1);
+      newEntries.sort(sortByShortcode);
       setEntries(newEntries);
     }
 
     reload();
-  }, [getFile]);
+  }, [getFiles]);
 
   const doUpload = useCallback(async () => {
     const failedEntries = [];
@@ -160,32 +184,32 @@ function ImagePackBatchImportDialog({ getFile, packName, requestClose, onImport 
 }
 
 ImagePackBatchImportDialog.defaultProps = {
-  getFile: null,
+  getFiles: null,
   packName: null,
   requestClose: null,
   onImport: null,
 };
 
 ImagePackBatchImportDialog.propTypes = {
-  getFile: PropTypes.func,
+  getFiles: PropTypes.func,
   packName: PropTypes.string,
   requestClose: PropTypes.func,
   onImport: PropTypes.func,
 };
 
-export const imagePackBatchImportDialog = (getFile, packName, onImport) => {
+export const imagePackBatchImportDialog = (getFiles, packName, onImport) => {
   openReusableDialog(
     <>
       <Text variant="s1" weight="medium">
         Batch Import -&nbsp;
       </Text>
       <Text variant="b1" weight="light">
-        {getFile().name}
+        {getFiles()[0].name}
       </Text>
     </>,
     (requestClose) => (
       <ImagePackBatchImportDialog
-        getFile={getFile}
+        getFiles={getFiles}
         packName={packName}
         requestClose={requestClose}
         onImport={onImport}
