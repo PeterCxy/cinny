@@ -388,6 +388,7 @@ function ImagePackUser() {
         onUsageChange={handleUsageChange}
         onAvatarChange={handleAvatarChange}
         onEditProfile={handleEditProfile}
+        onImport={handleAddItem}
       />
       <ImagePackUpload onUpload={handleAddItem} />
       {images.length === 0 ? null : (
