@@ -22,6 +22,8 @@ import {
   IThumbnailContent,
   IVideoContent,
   IVideoInfo,
+  MATRIX_SPOILER_PROPERTY_NAME,
+  MATRIX_SPOILER_REASON_PROPERTY_NAME,
 } from '../../../types/matrix/common';
 import { FALLBACK_MIMETYPE, getBlobSafeMimeType } from '../../utils/mimeTypes';
 import { parseGeoUri, scaleYDimension } from '../../utils/common';
@@ -172,10 +174,13 @@ export function MNotice({ edited, content, renderBody, renderUrlsPreview }: MNot
 
 type RenderImageContentProps = {
   body: string;
+  filename?: string;
   info?: IImageInfo & IThumbnailContent;
   mimeType?: string;
   url: string;
   encInfo?: IEncryptedFile;
+  markedAsSpoiler?: boolean;
+  spoilerReason?: string;
 };
 type MImageProps = {
   content: IImageContent;
@@ -203,6 +208,8 @@ export function MImage({ content, renderImageContent, outlined }: MImageProps) {
           mimeType: imgInfo?.mimetype,
           url: mxcUrl,
           encInfo: content.file,
+          markedAsSpoiler: content[MATRIX_SPOILER_PROPERTY_NAME],
+          spoilerReason: content[MATRIX_SPOILER_REASON_PROPERTY_NAME],
         })}
       </AttachmentBox>
     </Attachment>
@@ -282,7 +289,7 @@ export function MAudio({ content, renderAsFile, renderAudioContent, outlined }: 
   return (
     <Attachment outlined={outlined}>
       <AttachmentHeader>
-        <FileHeader body={content.body ?? 'Audio'} mimeType={safeMimeType} />
+        <FileHeader body={content.filename ?? content.body ?? 'Audio'} mimeType={safeMimeType} />
       </AttachmentHeader>
       <AttachmentBox>
         <AttachmentContent>
@@ -322,14 +329,14 @@ export function MFile({ content, renderFileContent, outlined }: MFileProps) {
     <Attachment outlined={outlined}>
       <AttachmentHeader>
         <FileHeader
-          body={content.body ?? 'Unnamed File'}
+          body={content.filename ?? content.body ?? 'Unnamed File'}
           mimeType={fileInfo?.mimetype ?? FALLBACK_MIMETYPE}
         />
       </AttachmentHeader>
       <AttachmentBox>
         <AttachmentContent>
           {renderFileContent({
-            body: content.body ?? 'File',
+            body: content.filename ?? content.body ?? 'File',
             info: fileInfo ?? {},
             mimeType: fileInfo?.mimetype ?? FALLBACK_MIMETYPE,
             url: mxcUrl,

@@ -4,6 +4,7 @@ import {
   EventTimeline,
   EventTimelineSet,
   EventType,
+  IMentions,
   IPushRule,
   IPushRules,
   JoinRule,
@@ -30,10 +31,12 @@ export const getStateEvent = (
   room: Room,
   eventType: StateEvent,
   stateKey = ''
-): MatrixEvent | undefined => room.currentState.getStateEvents(eventType, stateKey) ?? undefined;
+): MatrixEvent | undefined =>
+  room.getLiveTimeline().getState(EventTimeline.FORWARDS)?.getStateEvents(eventType, stateKey) ??
+  undefined;
 
 export const getStateEvents = (room: Room, eventType: StateEvent): MatrixEvent[] =>
-  room.currentState.getStateEvents(eventType);
+  room.getLiveTimeline().getState(EventTimeline.FORWARDS)?.getStateEvents(eventType) ?? [];
 
 export const getAccountData = (
   mx: MatrixClient,
@@ -428,3 +431,15 @@ export const getLatestEditableEvt = (
 export const reactionOrEditEvent = (mEvent: MatrixEvent) =>
   mEvent.getRelation()?.rel_type === RelationType.Annotation ||
   mEvent.getRelation()?.rel_type === RelationType.Replace;
+
+export const getMentionContent = (userIds: string[], room: boolean): IMentions => {
+  const mMentions: IMentions = {};
+  if (userIds.length > 0) {
+    mMentions.user_ids = userIds;
+  }
+  if (room) {
+    mMentions.room = true;
+  }
+
+  return mMentions;
+};

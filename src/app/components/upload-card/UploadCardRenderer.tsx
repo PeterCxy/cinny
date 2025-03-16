@@ -1,37 +1,101 @@
-import React from 'react';
-import { Chip, Icon, IconButton, Icons, Text, color } from 'folds';
+import React, { useEffect } from 'react';
+import { Box, Chip, Icon, IconButton, Icons, Text, color, config, toRem } from 'folds';
 import { UploadCard, UploadCardError, UploadCardProgress } from './UploadCard';
-import { TUploadAtom, UploadStatus, useBindUploadAtom } from '../../state/upload';
+import { UploadStatus, UploadSuccess, useBindUploadAtom } from '../../state/upload';
 import { useMatrixClient } from '../../hooks/useMatrixClient';
 import { TUploadContent } from '../../utils/matrix';
 import { getFileTypeIcon } from '../../utils/common';
+import {
+  roomUploadAtomFamily,
+  TUploadItem,
+  TUploadMetadata,
+} from '../../state/room/roomInputDrafts';
+import { useObjectURL } from '../../hooks/useObjectURL';
+
+type ImagePreviewProps = { fileItem: TUploadItem; onSpoiler: (marked: boolean) => void };
+function ImagePreview({ fileItem, onSpoiler }: ImagePreviewProps) {
+  const { originalFile, metadata } = fileItem;
+  const fileUrl = useObjectURL(originalFile);
+
+  return fileUrl ? (
+    <Box
+      style={{
+        borderRadius: config.radii.R300,
+        overflow: 'hidden',
+        backgroundColor: 'black',
+        position: 'relative',
+      }}
+    >
+      <img
+        style={{
+          objectFit: 'contain',
+          width: '100%',
+          height: toRem(152),
+          filter: fileItem.metadata.markedAsSpoiler ? 'blur(44px)' : undefined,
+        }}
+        src={fileUrl}
+        alt={originalFile.name}
+      />
+      <Box
+        justifyContent="End"
+        style={{
+          position: 'absolute',
+          bottom: config.space.S100,
+          left: config.space.S100,
+          right: config.space.S100,
+        }}
+      >
+        <Chip
+          variant={metadata.markedAsSpoiler ? 'Warning' : 'Secondary'}
+          fill="Soft"
+          radii="Pill"
+          aria-pressed={metadata.markedAsSpoiler}
+          before={<Icon src={Icons.EyeBlind} size="50" />}
+          onClick={() => onSpoiler(!metadata.markedAsSpoiler)}
+        >
+          <Text size="B300">Spoiler</Text>
+        </Chip>
+      </Box>
+    </Box>
+  ) : null;
+}
 
 type UploadCardRendererProps = {
-  file: TUploadContent;
   isEncrypted?: boolean;
-  uploadAtom: TUploadAtom;
+  fileItem: TUploadItem;
+  setMetadata: (fileItem: TUploadItem, metadata: TUploadMetadata) => void;
   onRemove: (file: TUploadContent) => void;
+  onComplete?: (upload: UploadSuccess) => void;
 };
 export function UploadCardRenderer({
-  file,
   isEncrypted,
-  uploadAtom,
+  fileItem,
+  setMetadata,
   onRemove,
+  onComplete,
 }: UploadCardRendererProps) {
   const mx = useMatrixClient();
-  const { upload, startUpload, cancelUpload } = useBindUploadAtom(
-    mx,
-    file,
-    uploadAtom,
-    isEncrypted
-  );
+  const uploadAtom = roomUploadAtomFamily(fileItem.file);
+  const { metadata } = fileItem;
+  const { upload, startUpload, cancelUpload } = useBindUploadAtom(mx, uploadAtom, isEncrypted);
+  const { file } = upload;
 
   if (upload.status === UploadStatus.Idle) startUpload();
+
+  const handleSpoiler = (marked: boolean) => {
+    setMetadata(fileItem, { ...metadata, markedAsSpoiler: marked });
+  };
 
   const removeUpload = () => {
     cancelUpload();
     onRemove(file);
   };
+
+  useEffect(() => {
+    if (upload.status === UploadStatus.Success) {
+      onComplete?.(upload);
+    }
+  }, [upload, onComplete]);
 
   return (
     <UploadCard
@@ -64,6 +128,9 @@ export function UploadCardRenderer({
       }
       bottom={
         <>
+          {fileItem.originalFile.type.startsWith('image') && (
+            <ImagePreview fileItem={fileItem} onSpoiler={handleSpoiler} />
+          )}
           {upload.status === UploadStatus.Idle && (
             <UploadCardProgress sentBytes={0} totalBytes={file.size} />
           )}

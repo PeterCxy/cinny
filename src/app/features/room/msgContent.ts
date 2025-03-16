@@ -1,6 +1,10 @@
 import { IContent, MatrixClient, MsgType } from 'matrix-js-sdk';
 import to from 'await-to-js';
-import { IThumbnailContent, MATRIX_BLUR_HASH_PROPERTY_NAME } from '../../../types/matrix/common';
+import {
+  IThumbnailContent,
+  MATRIX_BLUR_HASH_PROPERTY_NAME,
+  MATRIX_SPOILER_PROPERTY_NAME,
+} from '../../../types/matrix/common';
 import {
   getImageFileUrl,
   getThumbnail,
@@ -44,13 +48,15 @@ export const getImageMsgContent = async (
   item: TUploadItem,
   mxc: string
 ): Promise<IContent> => {
-  const { file, originalFile, encInfo } = item;
+  const { file, originalFile, encInfo, metadata } = item;
   const [imgError, imgEl] = await to(loadImageElement(getImageFileUrl(originalFile)));
   if (imgError) console.warn(imgError);
 
   const content: IContent = {
     msgtype: MsgType.Image,
+    filename: file.name,
     body: file.name,
+    [MATRIX_SPOILER_PROPERTY_NAME]: metadata.markedAsSpoiler,
   };
   if (imgEl) {
     const blurHash = encodeBlurHash(imgEl, 512, scaleYDimension(imgEl.width, 512, imgEl.height));
@@ -83,6 +89,7 @@ export const getVideoMsgContent = async (
 
   const content: IContent = {
     msgtype: MsgType.Video,
+    filename: file.name,
     body: file.name,
   };
   if (videoEl) {
@@ -122,6 +129,7 @@ export const getAudioMsgContent = (item: TUploadItem, mxc: string): IContent => 
   const { file, encInfo } = item;
   const content: IContent = {
     msgtype: MsgType.Audio,
+    filename: file.name,
     body: file.name,
     info: {
       mimetype: file.type,

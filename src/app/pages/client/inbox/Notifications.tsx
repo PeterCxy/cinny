@@ -182,6 +182,7 @@ type RoomNotificationsGroupProps = {
   notifications: INotification[];
   mediaAutoLoad?: boolean;
   urlPreview?: boolean;
+  hideActivity: boolean;
   onOpen: (roomId: string, eventId: string) => void;
 };
 function RoomNotificationsGroupComp({
@@ -189,6 +190,7 @@ function RoomNotificationsGroupComp({
   notifications,
   mediaAutoLoad,
   urlPreview,
+  hideActivity,
   onOpen,
 }: RoomNotificationsGroupProps) {
   const mx = useMatrixClient();
@@ -362,7 +364,7 @@ function RoomNotificationsGroupComp({
     onOpen(room.roomId, eventId);
   };
   const handleMarkAsRead = () => {
-    markAsRead(mx, room.roomId);
+    markAsRead(mx, room.roomId, hideActivity);
   };
 
   return (
@@ -427,7 +429,14 @@ function RoomNotificationsGroupComp({
                         userId={event.sender}
                         src={
                           senderAvatarMxc
-                            ? mxcUrlToHttp(mx, senderAvatarMxc, useAuthentication, 48, 48, 'crop') ?? undefined
+                            ? mxcUrlToHttp(
+                                mx,
+                                senderAvatarMxc,
+                                useAuthentication,
+                                48,
+                                48,
+                                'crop'
+                              ) ?? undefined
                             : undefined
                         }
                         alt={displayName}
@@ -459,7 +468,6 @@ function RoomNotificationsGroupComp({
                 </Box>
                 {replyEventId && (
                   <Reply
-                    mx={mx}
                     room={room}
                     replyEventId={replyEventId}
                     threadRootId={threadRootId}
@@ -490,6 +498,7 @@ const DEFAULT_REFRESH_MS = 7000;
 
 export function Notifications() {
   const mx = useMatrixClient();
+  const [hideActivity] = useSetting(settingsAtom, 'hideActivity');
   const [mediaAutoLoad] = useSetting(settingsAtom, 'mediaAutoLoad');
   const [urlPreview] = useSetting(settingsAtom, 'urlPreview');
   const screenSize = useScreenSizeContext();
@@ -650,6 +659,7 @@ export function Notifications() {
                           notifications={group.notifications}
                           mediaAutoLoad={mediaAutoLoad}
                           urlPreview={urlPreview}
+                          hideActivity={hideActivity}
                           onOpen={navigateRoom}
                         />
                       </VirtualTile>

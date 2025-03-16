@@ -21,7 +21,7 @@ import {
 } from 'folds';
 import { Editor, Transforms } from 'slate';
 import { ReactEditor } from 'slate-react';
-import { IContent, MatrixEvent, RelationType, Room } from 'matrix-js-sdk';
+import { IContent, IMentions, MatrixEvent, RelationType, Room } from 'matrix-js-sdk';
 import { isKeyHotkey } from 'is-hotkey';
 import {
   AUTOCOMPLETE_PREFIXES,
@@ -43,6 +43,7 @@ import {
   toPlainText,
   trimCustomHtml,
   useEditor,
+  getMentions,
 } from '../../../components/editor';
 import { useSetting } from '../../../state/hooks/settings';
 import { settingsAtom } from '../../../state/settings';
@@ -50,7 +51,7 @@ import { UseStateProvider } from '../../../components/UseStateProvider';
 import { EmojiBoard } from '../../../components/emoji-board';
 import { AsyncStatus, useAsyncCallback } from '../../../hooks/useAsyncCallback';
 import { useMatrixClient } from '../../../hooks/useMatrixClient';
-import { getEditedEvent, trimReplyFromFormattedBody } from '../../../utils/room';
+import { getEditedEvent, getMentionContent, trimReplyFromFormattedBody } from '../../../utils/room';
 import { mobileOrTablet } from '../../../utils/user-agent';
 
 type MessageEditorProps = {
@@ -74,25 +75,29 @@ export const MessageEditor = as<'div', MessageEditorProps>(
 
     const getPrevBodyAndFormattedBody = useCallback((): [
       string | undefined,
-      string | undefined
+      string | undefined,
+      IMentions | undefined
     ] => {
       const evtId = mEvent.getId()!;
       const evtTimeline = room.getTimelineForEvent(evtId);
       const editedEvent =
         evtTimeline && getEditedEvent(evtId, mEvent, evtTimeline.getTimelineSet());
 
-      const { body, formatted_body: customHtml }: Record<string, unknown> =
-        editedEvent?.getContent()['m.new_content'] ?? mEvent.getContent();
+      const content: IContent = editedEvent?.getContent()['m.new_content'] ?? mEvent.getContent();
+      const { body, formatted_body: customHtml }: Record<string, unknown> = content;
+
+      const mMentions: IMentions | undefined = content['m.mentions'];
 
       return [
         typeof body === 'string' ? body : undefined,
         typeof customHtml === 'string' ? customHtml : undefined,
+        mMentions,
       ];
     }, [room, mEvent]);
 
     const [saveState, save] = useAsyncCallback(
       useCallback(async () => {
-        const plainText = toPlainText(editor.children).trim();
+        const plainText = toPlainText(editor.children, isMarkdown).trim();
         const customHtml = trimCustomHtml(
           toMatrixCustomHTML(editor.children, {
             allowTextFormatting: true,
@@ -101,7 +106,7 @@ export const MessageEditor = as<'div', MessageEditorProps>(
           })
         );
 
-        const [prevBody, prevCustomHtml] = getPrevBodyAndFormattedBody();
+        const [prevBody, prevCustomHtml, prevMentions] = getPrevBodyAndFormattedBody();
 
         if (plainText === '') return undefined;
         if (prevBody) {
@@ -121,6 +126,15 @@ export const MessageEditor = as<'div', MessageEditorProps>(
           msgtype: mEvent.getContent().msgtype,
           body: plainText,
         };
+
+        const mentionData = getMentions(mx, roomId, editor);
+
+        prevMentions?.user_ids?.forEach((prevMentionId) => {
+          mentionData.users.add(prevMentionId);
+        });
+
+        const mMentions = getMentionContent(Array.from(mentionData.users), mentionData.room);
+        newContent['m.mentions'] = mMentions;
 
         if (!customHtmlEqualsPlainText(customHtml, plainText)) {
           newContent.format = 'org.matrix.custom.html';
@@ -192,8 +206,8 @@ export const MessageEditor = as<'div', MessageEditorProps>(
 
       const initialValue =
         typeof customHtml === 'string'
-          ? htmlToEditorInput(customHtml)
-          : plainToEditorInput(typeof body === 'string' ? body : '');
+          ? htmlToEditorInput(customHtml, isMarkdown)
+          : plainToEditorInput(typeof body === 'string' ? body : '', isMarkdown);
 
       Transforms.select(editor, {
         anchor: Editor.start(editor, []),
@@ -202,7 +216,7 @@ export const MessageEditor = as<'div', MessageEditorProps>(
 
       editor.insertFragment(initialValue);
       if (!mobileOrTablet()) ReactEditor.focus(editor);
-    }, [editor, getPrevBodyAndFormattedBody]);
+    }, [editor, getPrevBodyAndFormattedBody, isMarkdown]);
 
     useEffect(() => {
       if (saveState.status === AsyncStatus.Success) {
@@ -291,8 +305,13 @@ export const MessageEditor = as<'div', MessageEditorProps>(
                             onEmojiSelect={handleEmoticonSelect}
                             onCustomEmojiSelect={handleEmoticonSelect}
                             requestClose={() => {
-                              setAnchor(undefined);
-                              if (!mobileOrTablet()) ReactEditor.focus(editor);
+                              setAnchor((v) => {
+                                if (v) {
+                                  if (!mobileOrTablet()) ReactEditor.focus(editor);
+                                  return undefined;
+                                }
+                                return v;
+                              });
                             }}
                           />
                         }

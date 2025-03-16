@@ -1,6 +1,6 @@
 {
   "name": "cinny",
-  "version": "4.2.2",
+  "version": "4.5.1",
   "description": "Yet another matrix client",
   "main": "index.js",
   "type": "module",
@@ -40,12 +40,12 @@
     "dateformat": "5.0.3",
     "dayjs": "1.11.10",
     "domhandler": "5.0.3",
-    "emojibase": "6.1.0",
-    "emojibase-data": "7.0.1",
+    "emojibase": "15.3.1",
+    "emojibase-data": "15.3.2",
     "file-saver": "2.0.5",
     "flux": "4.0.3",
     "focus-trap-react": "10.0.2",
-    "folds": "2.0.0",
+    "folds": "2.1.0",
     "formik": "2.4.6",
     "html-dom-parser": "4.0.0",
     "html-react-parser": "4.2.0",
@@ -57,7 +57,7 @@
     "jotai": "2.6.0",
     "linkify-react": "4.1.3",
     "linkifyjs": "4.1.3",
-    "matrix-js-sdk": "34.8.0",
+    "matrix-js-sdk": "35.0.0",
     "millify": "6.1.0",
     "pdfjs-dist": "4.2.67",
     "prismjs": "1.29.0",
@@ -74,9 +74,10 @@
     "react-range": "1.8.14",
     "react-router-dom": "6.20.0",
     "sanitize-html": "2.12.1",
-    "slate": "0.94.1",
-    "slate-history": "0.93.0",
-    "slate-react": "0.98.4",
+    "slate": "0.112.0",
+    "slate-dom": "0.112.2",
+    "slate-history": "0.110.3",
+    "slate-react": "0.112.1",
     "tippy.js": "6.3.7",
     "ua-parser-js": "1.0.35",
     "uuid": "11.0.2"
@@ -86,6 +87,7 @@
     "@rollup/plugin-inject": "5.0.3",
     "@rollup/plugin-wasm": "6.1.1",
     "@types/file-saver": "2.0.5",
+    "@types/is-hotkey": "0.1.10",
     "@types/node": "18.11.18",
     "@types/prismjs": "1.26.0",
     "@types/react": "18.2.39",
@@ -110,6 +112,6 @@
     "vite": "5.0.13",
     "vite-plugin-pwa": "0.20.5",
     "vite-plugin-static-copy": "1.0.4",
-    "vite-plugin-top-level-await": "1.4.1"
+    "vite-plugin-top-level-await": "1.4.4"
   }
 }

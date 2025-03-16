@@ -3,6 +3,7 @@ import {
   Badge,
   Box,
   Button,
+  Chip,
   Icon,
   Icons,
   Spinner,
@@ -40,6 +41,8 @@ export type ImageContentProps = {
   info?: IImageInfo;
   encInfo?: EncryptedAttachmentInfo;
   autoPlay?: boolean;
+  markedAsSpoiler?: boolean;
+  spoilerReason?: string;
   renderViewer: (props: RenderViewerProps) => ReactNode;
   renderImage: (props: RenderImageProps) => ReactNode;
 };
@@ -53,6 +56,8 @@ export const ImageContent = as<'div', ImageContentProps>(
       info,
       encInfo,
       autoPlay,
+      markedAsSpoiler,
+      spoilerReason,
       renderViewer,
       renderImage,
       ...props
@@ -66,6 +71,7 @@ export const ImageContent = as<'div', ImageContentProps>(
     const [load, setLoad] = useState(false);
     const [error, setError] = useState(false);
     const [viewer, setViewer] = useState(false);
+    const [blurred, setBlurred] = useState(markedAsSpoiler ?? false);
 
     const [srcState, loadSrc] = useAsyncCallback(
       useCallback(async () => {
@@ -117,7 +123,7 @@ export const ImageContent = as<'div', ImageContentProps>(
             punch={1}
           />
         )}
-        {!autoPlay && srcState.status === AsyncStatus.Idle && (
+        {!autoPlay && !markedAsSpoiler && srcState.status === AsyncStatus.Idle && (
           <Box className={css.AbsoluteContainer} alignItems="Center" justifyContent="Center">
             <Button
               variant="Secondary"
@@ -132,7 +138,7 @@ export const ImageContent = as<'div', ImageContentProps>(
           </Box>
         )}
         {srcState.status === AsyncStatus.Success && (
-          <Box className={css.AbsoluteContainer}>
+          <Box className={classNames(css.AbsoluteContainer, blurred && css.Blur)}>
             {renderImage({
               alt: body,
               title: body,
@@ -144,8 +150,42 @@ export const ImageContent = as<'div', ImageContentProps>(
             })}
           </Box>
         )}
+        {blurred && !error && srcState.status !== AsyncStatus.Error && (
+          <Box className={css.AbsoluteContainer} alignItems="Center" justifyContent="Center">
+            <TooltipProvider
+              tooltip={
+                typeof spoilerReason === 'string' && (
+                  <Tooltip variant="Secondary">
+                    <Text>{spoilerReason}</Text>
+                  </Tooltip>
+                )
+              }
+              position="Top"
+              align="Center"
+            >
+              {(triggerRef) => (
+                <Chip
+                  ref={triggerRef}
+                  variant="Secondary"
+                  radii="Pill"
+                  size="500"
+                  outlined
+                  onClick={() => {
+                    setBlurred(false);
+                    if (srcState.status === AsyncStatus.Idle) {
+                      loadSrc();
+                    }
+                  }}
+                >
+                  <Text size="B300">Spoiler</Text>
+                </Chip>
+              )}
+            </TooltipProvider>
+          </Box>
+        )}
         {(srcState.status === AsyncStatus.Loading || srcState.status === AsyncStatus.Success) &&
-          !load && (
+          !load &&
+          !markedAsSpoiler && (
             <Box className={css.AbsoluteContainer} alignItems="Center" justifyContent="Center">
               <Spinner variant="Secondary" />
             </Box>
