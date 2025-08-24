@@ -20,6 +20,7 @@ import {
   PopOut,
   RectCords,
   Badge,
+  Spinner,
 } from 'folds';
 import { useNavigate } from 'react-router-dom';
 import { JoinRule, Room } from 'matrix-js-sdk';
@@ -33,7 +34,7 @@ import { RoomTopicViewer } from '../../components/room-topic-viewer';
 import { StateEvent } from '../../../types/matrix/room';
 import { useMatrixClient } from '../../hooks/useMatrixClient';
 import { useRoom } from '../../hooks/useRoom';
-import { useSetSetting, useSetting } from '../../state/hooks/settings';
+import { useSetting } from '../../state/hooks/settings';
 import { settingsAtom } from '../../state/settings';
 import { useSpaceOptionally } from '../../hooks/useSpace';
 import { getHomeSearchPath, getSpaceSearchPath, withSearchParam } from '../../pages/pathUtils';
@@ -41,10 +42,9 @@ import { getCanonicalAliasOrRoomId, isRoomAlias, mxcUrlToHttp } from '../../util
 import { _SearchPathSearchParams } from '../../pages/paths';
 import * as css from './RoomViewHeader.css';
 import { useRoomUnread } from '../../state/hooks/unread';
-import { usePowerLevelsAPI, usePowerLevelsContext } from '../../hooks/usePowerLevels';
+import { usePowerLevelsContext } from '../../hooks/usePowerLevels';
 import { markAsRead } from '../../../client/action/notifications';
 import { roomToUnreadAtom } from '../../state/room/roomToUnread';
-import { openInviteUser, toggleRoomSettings } from '../../../client/action/navigation';
 import { copyToClipboard } from '../../utils/dom';
 import { LeaveRoomPrompt } from '../../components/leave-room-prompt';
 import { useRoomAvatar, useRoomName, useRoomTopic } from '../../hooks/useRoomMeta';
@@ -57,6 +57,18 @@ import { BackRouteHandler } from '../../components/BackRouteHandler';
 import { useMediaAuthentication } from '../../hooks/useMediaAuthentication';
 import { useRoomPinnedEvents } from '../../hooks/useRoomPinnedEvents';
 import { RoomPinMenu } from './room-pin-menu';
+import { useOpenRoomSettings } from '../../state/hooks/roomSettings';
+import { RoomNotificationModeSwitcher } from '../../components/RoomNotificationSwitcher';
+import {
+  getRoomNotificationMode,
+  getRoomNotificationModeIcon,
+  useRoomsNotificationPreferencesContext,
+} from '../../hooks/useRoomsNotificationPreferences';
+import { JumpToTime } from './jump-to-time';
+import { useRoomNavigate } from '../../hooks/useRoomNavigate';
+import { useRoomCreators } from '../../hooks/useRoomCreators';
+import { useRoomPermissions } from '../../hooks/useRoomPermissions';
+import { InviteUserPrompt } from '../../components/invite-user-prompt';
 
 type RoomMenuProps = {
   room: Room;
@@ -67,8 +79,15 @@ const RoomMenu = forwardRef<HTMLDivElement, RoomMenuProps>(({ room, requestClose
   const [hideActivity] = useSetting(settingsAtom, 'hideActivity');
   const unread = useRoomUnread(room.roomId, roomToUnreadAtom);
   const powerLevels = usePowerLevelsContext();
-  const { getPowerLevel, canDoAction } = usePowerLevelsAPI(powerLevels);
-  const canInvite = canDoAction('invite', getPowerLevel(mx.getUserId() ?? ''));
+  const creators = useRoomCreators(room);
+
+  const permissions = useRoomPermissions(creators, powerLevels);
+  const canInvite = permissions.action('invite', mx.getSafeUserId());
+  const notificationPreferences = useRoomsNotificationPreferencesContext();
+  const notificationMode = getRoomNotificationMode(notificationPreferences, room.roomId);
+  const { navigateRoom } = useRoomNavigate();
+
+  const [invitePrompt, setInvitePrompt] = useState(false);
 
   const handleMarkAsRead = () => {
     markAsRead(mx, room.roomId, hideActivity);
@@ -76,8 +95,7 @@ const RoomMenu = forwardRef<HTMLDivElement, RoomMenuProps>(({ room, requestClose
   };
 
   const handleInvite = () => {
-    openInviteUser(room.roomId);
-    requestClose();
+    setInvitePrompt(true);
   };
 
   const handleCopyLink = () => {
@@ -87,13 +105,24 @@ const RoomMenu = forwardRef<HTMLDivElement, RoomMenuProps>(({ room, requestClose
     requestClose();
   };
 
-  const handleRoomSettings = () => {
-    toggleRoomSettings(room.roomId);
+  const openSettings = useOpenRoomSettings();
+  const parentSpace = useSpaceOptionally();
+  const handleOpenSettings = () => {
+    openSettings(room.roomId, parentSpace?.roomId);
     requestClose();
   };
 
   return (
     <Menu ref={ref} style={{ maxWidth: toRem(160), width: '100vw' }}>
+      {invitePrompt && (
+        <InviteUserPrompt
+          room={room}
+          requestClose={() => {
+            setInvitePrompt(false);
+            requestClose();
+          }}
+        />
+      )}
       <Box direction="Column" gap="100" style={{ padding: config.space.S100 }}>
         <MenuItem
           onClick={handleMarkAsRead}
@@ -106,6 +135,27 @@ const RoomMenu = forwardRef<HTMLDivElement, RoomMenuProps>(({ room, requestClose
             Mark as Read
           </Text>
         </MenuItem>
+        <RoomNotificationModeSwitcher roomId={room.roomId} value={notificationMode}>
+          {(handleOpen, opened, changing) => (
+            <MenuItem
+              size="300"
+              after={
+                changing ? (
+                  <Spinner size="100" variant="Secondary" />
+                ) : (
+                  <Icon size="100" src={getRoomNotificationModeIcon(notificationMode)} />
+                )
+              }
+              radii="300"
+              aria-pressed={opened}
+              onClick={handleOpen}
+            >
+              <Text style={{ flexGrow: 1 }} as="span" size="T300" truncate>
+                Notifications
+              </Text>
+            </MenuItem>
+          )}
+        </RoomNotificationModeSwitcher>
       </Box>
       <Line variant="Surface" size="300" />
       <Box direction="Column" gap="100" style={{ padding: config.space.S100 }}>
@@ -116,6 +166,7 @@ const RoomMenu = forwardRef<HTMLDivElement, RoomMenuProps>(({ room, requestClose
           size="300"
           after={<Icon size="100" src={Icons.UserPlus} />}
           radii="300"
+          aria-pressed={invitePrompt}
           disabled={!canInvite}
         >
           <Text style={{ flexGrow: 1 }} as="span" size="T300" truncate>
@@ -133,7 +184,7 @@ const RoomMenu = forwardRef<HTMLDivElement, RoomMenuProps>(({ room, requestClose
           </Text>
         </MenuItem>
         <MenuItem
-          onClick={handleRoomSettings}
+          onClick={handleOpenSettings}
           size="300"
           after={<Icon size="100" src={Icons.Setting} />}
           radii="300"
@@ -142,6 +193,33 @@ const RoomMenu = forwardRef<HTMLDivElement, RoomMenuProps>(({ room, requestClose
             Room Settings
           </Text>
         </MenuItem>
+        <UseStateProvider initial={false}>
+          {(promptJump, setPromptJump) => (
+            <>
+              <MenuItem
+                onClick={() => setPromptJump(true)}
+                size="300"
+                after={<Icon size="100" src={Icons.RecentClock} />}
+                radii="300"
+                aria-pressed={promptJump}
+              >
+                <Text style={{ flexGrow: 1 }} as="span" size="T300" truncate>
+                  Jump to Time
+                </Text>
+              </MenuItem>
+              {promptJump && (
+                <JumpToTime
+                  onSubmit={(eventId) => {
+                    setPromptJump(false);
+                    navigateRoom(room.roomId, eventId);
+                    requestClose();
+                  }}
+                  onCancel={() => setPromptJump(false)}
+                />
+              )}
+            </>
+          )}
+        </UseStateProvider>
       </Box>
       <Line variant="Surface" size="300" />
       <Box direction="Column" gap="100" style={{ padding: config.space.S100 }}>
@@ -197,7 +275,7 @@ export function RoomViewHeader() {
     ? mxcUrlToHttp(mx, avatarMxc, useAuthentication, 96, 96, 'crop') ?? undefined
     : undefined;
 
-  const setPeopleDrawer = useSetSetting(settingsAtom, 'isPeopleDrawer');
+  const [peopleDrawer, setPeopleDrawer] = useSetting(settingsAtom, 'isPeopleDrawer');
 
   const handleSearchClick = () => {
     const searchParams: _SearchPathSearchParams = {
@@ -371,7 +449,7 @@ export function RoomViewHeader() {
               offset={4}
               tooltip={
                 <Tooltip>
-                  <Text>Members</Text>
+                  <Text>{peopleDrawer ? 'Hide Members' : 'Show Members'}</Text>
                 </Tooltip>
               }
             >

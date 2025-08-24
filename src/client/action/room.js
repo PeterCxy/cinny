@@ -12,7 +12,7 @@ function addRoomToMDirect(mx, roomId, userId) {
   const mDirectsEvent = mx.getAccountData('m.direct');
   let userIdToRoomIds = {};
 
-  if (typeof mDirectsEvent !== 'undefined') userIdToRoomIds = mDirectsEvent.getContent();
+  if (typeof mDirectsEvent !== 'undefined') userIdToRoomIds = structuredClone(mDirectsEvent.getContent());
 
   // remove it from the lists of any others users
   // (it can only be a DM room for one person)
@@ -93,11 +93,8 @@ function convertToRoom(mx, roomId) {
  * @param {string[]} via
  */
 async function join(mx, roomIdOrAlias, isDM = false, via = undefined) {
-  const roomIdParts = roomIdOrAlias.split(':');
-  const viaServers = via || [roomIdParts[1]];
-
   try {
-    const resultRoom = await mx.joinRoom(roomIdOrAlias, { viaServers });
+    const resultRoom = await mx.joinRoom(roomIdOrAlias, { viaServers: via });
 
     if (isDM) {
       const targetUserId = guessDMRoomTargetId(mx.getRoom(resultRoom.roomId), mx.getUserId());

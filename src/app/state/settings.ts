@@ -1,6 +1,7 @@
 import { atom } from 'jotai';
 
 const STORAGE_KEY = 'settings';
+export type DateFormat = 'D MMM YYYY' | 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY/MM/DD' | '';
 export type MessageSpacing = '0' | '100' | '200' | '300' | '400' | '500';
 export enum MessageLayout {
   Modern = 0,
@@ -30,9 +31,13 @@ export interface Settings {
   urlPreview: boolean;
   encUrlPreview: boolean;
   showHiddenEvents: boolean;
+  legacyUsernameColor: boolean;
 
   showNotifications: boolean;
   isNotificationSounds: boolean;
+
+  hour24Clock: boolean;
+  dateFormatString: string;
 
   developerTools: boolean;
 }
@@ -59,9 +64,13 @@ const defaultSettings: Settings = {
   urlPreview: true,
   encUrlPreview: false,
   showHiddenEvents: false,
+  legacyUsernameColor: false,
 
   showNotifications: true,
   isNotificationSounds: true,
+
+  hour24Clock: false,
+  dateFormatString: 'D MMM YYYY',
 
   developerTools: false,
 };

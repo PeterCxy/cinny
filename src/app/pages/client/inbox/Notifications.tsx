@@ -26,6 +26,7 @@ import {
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { HTMLReactParserOptions } from 'html-react-parser';
 import { Opts as LinkifyOpts } from 'linkifyjs';
+import { useAtomValue } from 'jotai';
 import { Page, PageContent, PageContentCenter, PageHeader } from '../../../components/page';
 import { useMatrixClient } from '../../../hooks/useMatrixClient';
 import { getMxIdLocalPart, mxcUrlToHttp } from '../../../utils/matrix';
@@ -52,8 +53,8 @@ import {
   Reply,
   Time,
   Username,
+  UsernameBold,
 } from '../../../components/message';
-import colorMXID from '../../../../util/colorMXID';
 import {
   factoryRenderLinkifyWithMention,
   getReactCustomHtmlParser,
@@ -82,6 +83,20 @@ import { useSpoilerClickHandler } from '../../../hooks/useSpoilerClickHandler';
 import { ScreenSize, useScreenSizeContext } from '../../../hooks/useScreenSize';
 import { BackRouteHandler } from '../../../components/BackRouteHandler';
 import { useMediaAuthentication } from '../../../hooks/useMediaAuthentication';
+import { allRoomsAtom } from '../../../state/room-list/roomList';
+import { usePowerLevels } from '../../../hooks/usePowerLevels';
+import { usePowerLevelTags } from '../../../hooks/usePowerLevelTags';
+import { useTheme } from '../../../hooks/useTheme';
+import { PowerIcon } from '../../../components/power';
+import colorMXID from '../../../../util/colorMXID';
+import { mDirectAtom } from '../../../state/mDirectList';
+import {
+  getPowerTagIconSrc,
+  useAccessiblePowerTagColors,
+  useGetMemberPowerTag,
+} from '../../../hooks/useMemberPowerTag';
+import { useRoomCreatorsTag } from '../../../hooks/useRoomCreatorsTag';
+import { useRoomCreators } from '../../../hooks/useRoomCreators';
 
 type RoomNotificationsGroup = {
   roomId: string;
@@ -94,9 +109,14 @@ type NotificationTimeline = {
 type LoadTimeline = (from?: string) => Promise<void>;
 type SilentReloadTimeline = () => Promise<void>;
 
-const groupNotifications = (notifications: INotification[]): RoomNotificationsGroup[] => {
+const groupNotifications = (
+  notifications: INotification[],
+  allowRooms: Set<string>
+): RoomNotificationsGroup[] => {
   const groups: RoomNotificationsGroup[] = [];
   notifications.forEach((notification) => {
+    if (!allowRooms.has(notification.room_id)) return;
+
     const groupIndex = groups.length - 1;
     const lastAddedGroup: RoomNotificationsGroup | undefined = groups[groupIndex];
     if (lastAddedGroup && notification.room_id === lastAddedGroup.roomId) {
@@ -116,6 +136,9 @@ const useNotificationTimeline = (
   onlyHighlight?: boolean
 ): [NotificationTimeline, LoadTimeline, SilentReloadTimeline] => {
   const mx = useMatrixClient();
+  const allRooms = useAtomValue(allRoomsAtom);
+  const allJoinedRooms = useMemo(() => new Set(allRooms), [allRooms]);
+
   const [notificationTimeline, setNotificationTimeline] = useState<NotificationTimeline>({
     groups: [],
   });
@@ -142,7 +165,7 @@ const useNotificationTimeline = (
         paginationLimit,
         onlyHighlight ? 'highlight' : undefined
       );
-      const groups = groupNotifications(data.notifications);
+      const groups = groupNotifications(data.notifications, allJoinedRooms);
 
       setNotificationTimeline((currentTimeline) => {
         if (currentTimeline.nextToken === from) {
@@ -154,7 +177,7 @@ const useNotificationTimeline = (
         return currentTimeline;
       });
     },
-    [paginationLimit, onlyHighlight, fetchNotifications]
+    [paginationLimit, onlyHighlight, fetchNotifications, allJoinedRooms]
   );
 
   /**
@@ -167,12 +190,12 @@ const useNotificationTimeline = (
       paginationLimit,
       onlyHighlight ? 'highlight' : undefined
     );
-    const groups = groupNotifications(data.notifications);
+    const groups = groupNotifications(data.notifications, allJoinedRooms);
     setNotificationTimeline({
       nextToken: data.next_token,
       groups,
     });
-  }, [paginationLimit, onlyHighlight, fetchNotifications]);
+  }, [paginationLimit, onlyHighlight, fetchNotifications, allJoinedRooms]);
 
   return [notificationTimeline, loadTimeline, silentReloadTimeline];
 };
@@ -184,6 +207,9 @@ type RoomNotificationsGroupProps = {
   urlPreview?: boolean;
   hideActivity: boolean;
   onOpen: (roomId: string, eventId: string) => void;
+  legacyUsernameColor?: boolean;
+  hour24Clock: boolean;
+  dateFormatString: string;
 };
 function RoomNotificationsGroupComp({
   room,
@@ -192,10 +218,24 @@ function RoomNotificationsGroupComp({
   urlPreview,
   hideActivity,
   onOpen,
+  legacyUsernameColor,
+  hour24Clock,
+  dateFormatString,
 }: RoomNotificationsGroupProps) {
   const mx = useMatrixClient();
   const useAuthentication = useMediaAuthentication();
   const unread = useRoomUnread(room.roomId, roomToUnreadAtom);
+
+  const powerLevels = usePowerLevels(room);
+  const creators = useRoomCreators(room);
+
+  const creatorsTag = useRoomCreatorsTag();
+  const powerLevelTags = usePowerLevelTags(room, powerLevels);
+  const getMemberPowerTag = useGetMemberPowerTag(room, creators, powerLevels);
+
+  const theme = useTheme();
+  const accessibleTagColors = useAccessiblePowerTagColors(theme.kind, creatorsTag, powerLevelTags);
+
   const mentionClickHandler = useMentionClickHandler(room.roomId);
   const spoilerClickHandler = useSpoilerClickHandler();
 
@@ -414,6 +454,16 @@ function RoomNotificationsGroupComp({
           const threadRootId =
             relation?.rel_type === RelationType.Thread ? relation.event_id : undefined;
 
+          const memberPowerTag = getMemberPowerTag(event.sender);
+          const tagColor = memberPowerTag?.color
+            ? accessibleTagColors?.get(memberPowerTag.color)
+            : undefined;
+          const tagIconSrc = memberPowerTag?.icon
+            ? getPowerTagIconSrc(mx, useAuthentication, memberPowerTag.icon)
+            : undefined;
+
+          const usernameColor = legacyUsernameColor ? colorMXID(event.sender) : tagColor;
+
           return (
             <SequenceCard
               key={notification.event.event_id}
@@ -448,12 +498,19 @@ function RoomNotificationsGroupComp({
               >
                 <Box gap="300" justifyContent="SpaceBetween" alignItems="Center" grow="Yes">
                   <Box gap="200" alignItems="Baseline">
-                    <Username style={{ color: colorMXID(event.sender) }}>
-                      <Text as="span" truncate>
-                        <b>{displayName}</b>
-                      </Text>
-                    </Username>
-                    <Time ts={event.origin_server_ts} />
+                    <Box alignItems="Center" gap="200">
+                      <Username style={{ color: usernameColor }}>
+                        <Text as="span" truncate>
+                          <UsernameBold>{displayName}</UsernameBold>
+                        </Text>
+                      </Username>
+                      {tagIconSrc && <PowerIcon size="100" iconSrc={tagIconSrc} />}
+                    </Box>
+                    <Time
+                      ts={event.origin_server_ts}
+                      hour24Clock={hour24Clock}
+                      dateFormatString={dateFormatString}
+                    />
                   </Box>
                   <Box shrink="No" gap="200" alignItems="Center">
                     <Chip
@@ -472,6 +529,9 @@ function RoomNotificationsGroupComp({
                     replyEventId={replyEventId}
                     threadRootId={threadRootId}
                     onClick={handleOpenClick}
+                    getMemberPowerTag={getMemberPowerTag}
+                    accessibleTagColors={accessibleTagColors}
+                    legacyUsernameColor={legacyUsernameColor}
                   />
                 )}
                 {renderMatrixEvent(event.type, false, event, displayName, getContent)}
@@ -501,7 +561,11 @@ export function Notifications() {
   const [hideActivity] = useSetting(settingsAtom, 'hideActivity');
   const [mediaAutoLoad] = useSetting(settingsAtom, 'mediaAutoLoad');
   const [urlPreview] = useSetting(settingsAtom, 'urlPreview');
+  const [legacyUsernameColor] = useSetting(settingsAtom, 'legacyUsernameColor');
+  const [hour24Clock] = useSetting(settingsAtom, 'hour24Clock');
+  const [dateFormatString] = useSetting(settingsAtom, 'dateFormatString');
   const screenSize = useScreenSizeContext();
+  const mDirects = useAtomValue(mDirectAtom);
 
   const { navigateRoom } = useRoomNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -661,6 +725,11 @@ export function Notifications() {
                           urlPreview={urlPreview}
                           hideActivity={hideActivity}
                           onOpen={navigateRoom}
+                          legacyUsernameColor={
+                            legacyUsernameColor || mDirects.has(groupRoom.roomId)
+                          }
+                          hour24Clock={hour24Clock}
+                          dateFormatString={dateFormatString}
                         />
                       </VirtualTile>
                     );

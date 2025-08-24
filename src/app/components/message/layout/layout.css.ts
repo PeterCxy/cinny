@@ -133,7 +133,7 @@ export const AvatarBase = style({
 
   selectors: {
     '&:hover': {
-      transform: `translateY(${toRem(-4)})`,
+      transform: `translateY(${toRem(-2)})`,
     },
   },
 });
@@ -174,6 +174,10 @@ export const Username = style({
       textDecoration: 'underline',
     },
   },
+});
+
+export const UsernameBold = style({
+  fontWeight: 550,
 });
 
 export const MessageTextBody = recipe({

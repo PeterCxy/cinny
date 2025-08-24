@@ -2,7 +2,6 @@ import { Box, Icon, Icons, Text, as, color, toRem } from 'folds';
 import { EventTimelineSet, Room } from 'matrix-js-sdk';
 import React, { MouseEventHandler, ReactNode, useCallback, useMemo } from 'react';
 import classNames from 'classnames';
-import colorMXID from '../../../util/colorMXID';
 import { getMemberDisplayName, trimReplyFromBody } from '../../utils/room';
 import { getMxIdLocalPart } from '../../utils/matrix';
 import { LinePlaceholder } from './placeholder';
@@ -11,6 +10,8 @@ import * as css from './Reply.css';
 import { MessageBadEncryptedContent, MessageDeletedContent, MessageFailedContent } from './content';
 import { scaleSystemEmoji } from '../../plugins/react-custom-html-parser';
 import { useRoomEvent } from '../../hooks/useRoomEvent';
+import colorMXID from '../../../util/colorMXID';
+import { GetMemberPowerTag } from '../../hooks/useMemberPowerTag';
 
 type ReplyLayoutProps = {
   userColor?: string;
@@ -37,9 +38,16 @@ export const ReplyLayout = as<'div', ReplyLayoutProps>(
 );
 
 export const ThreadIndicator = as<'div'>(({ ...props }, ref) => (
-  <Box className={css.ThreadIndicator} alignItems="Center" {...props} ref={ref}>
-    <Icon className={css.ThreadIndicatorIcon} src={Icons.Message} />
-    <Text size="T200">Threaded reply</Text>
+  <Box
+    shrink="No"
+    className={css.ThreadIndicator}
+    alignItems="Center"
+    gap="100"
+    {...props}
+    ref={ref}
+  >
+    <Icon size="50" src={Icons.Thread} />
+    <Text size="L400">Thread</Text>
   </Box>
 ));
 
@@ -49,10 +57,26 @@ type ReplyProps = {
   replyEventId: string;
   threadRootId?: string | undefined;
   onClick?: MouseEventHandler | undefined;
+  getMemberPowerTag?: GetMemberPowerTag;
+  accessibleTagColors?: Map<string, string>;
+  legacyUsernameColor?: boolean;
 };
 
 export const Reply = as<'div', ReplyProps>(
-  ({ room, timelineSet, replyEventId, threadRootId, onClick, ...props }, ref) => {
+  (
+    {
+      room,
+      timelineSet,
+      replyEventId,
+      threadRootId,
+      onClick,
+      getMemberPowerTag,
+      accessibleTagColors,
+      legacyUsernameColor,
+      ...props
+    },
+    ref
+  ) => {
     const placeholderWidth = useMemo(() => randomNumberBetween(40, 400), []);
     const getFromLocalTimeline = useCallback(
       () => timelineSet?.findEventById(replyEventId),
@@ -62,6 +86,10 @@ export const Reply = as<'div', ReplyProps>(
 
     const { body } = replyEvent?.getContent() ?? {};
     const sender = replyEvent?.getSender();
+    const powerTag = sender ? getMemberPowerTag?.(sender) : undefined;
+    const tagColor = powerTag?.color ? accessibleTagColors?.get(powerTag.color) : undefined;
+
+    const usernameColor = legacyUsernameColor ? colorMXID(sender ?? replyEventId) : tagColor;
 
     const fallbackBody = replyEvent?.isRedacted() ? (
       <MessageDeletedContent />
@@ -73,13 +101,13 @@ export const Reply = as<'div', ReplyProps>(
     const bodyJSX = body ? scaleSystemEmoji(trimReplyFromBody(body)) : fallbackBody;
 
     return (
-      <Box direction="Column" alignItems="Start" {...props} ref={ref}>
+      <Box direction="Row" gap="200" alignItems="Center" {...props} ref={ref}>
         {threadRootId && (
           <ThreadIndicator as="button" data-event-id={threadRootId} onClick={onClick} />
         )}
         <ReplyLayout
           as="button"
-          userColor={sender ? colorMXID(sender) : undefined}
+          userColor={usernameColor}
           username={
             sender && (
               <Text size="T300" truncate>

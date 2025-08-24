@@ -5,7 +5,7 @@ import { ReactEditor } from 'slate-react';
 import { isKeyHotkey } from 'is-hotkey';
 import { useStateEvent } from '../../hooks/useStateEvent';
 import { StateEvent } from '../../../types/matrix/room';
-import { usePowerLevelsAPI, usePowerLevelsContext } from '../../hooks/usePowerLevels';
+import { usePowerLevelsContext } from '../../hooks/usePowerLevels';
 import { useMatrixClient } from '../../hooks/useMatrixClient';
 import { useEditor } from '../../components/editor';
 import { RoomInputPlaceholder } from './RoomInputPlaceholder';
@@ -21,6 +21,8 @@ import { editableActiveElement } from '../../utils/dom';
 import navigation from '../../../client/state/navigation';
 import { settingsAtom } from '../../state/settings';
 import { useSetting } from '../../state/hooks/settings';
+import { useRoomPermissions } from '../../hooks/useRoomPermissions';
+import { useRoomCreators } from '../../hooks/useRoomCreators';
 
 const FN_KEYS_REGEX = /^F\d+$/;
 const shouldFocusMessageField = (evt: KeyboardEvent): boolean => {
@@ -68,11 +70,10 @@ export function RoomView({ room, eventId }: { room: Room; eventId?: string }) {
 
   const tombstoneEvent = useStateEvent(room, StateEvent.RoomTombstone);
   const powerLevels = usePowerLevelsContext();
-  const { getPowerLevel, canSendEvent } = usePowerLevelsAPI(powerLevels);
-  const myUserId = mx.getUserId();
-  const canMessage = myUserId
-    ? canSendEvent(EventType.RoomMessage, getPowerLevel(myUserId))
-    : false;
+  const creators = useRoomCreators(room);
+
+  const permissions = useRoomPermissions(creators, powerLevels);
+  const canMessage = permissions.event(EventType.RoomMessage, mx.getSafeUserId());
 
   useKeyDown(
     window,

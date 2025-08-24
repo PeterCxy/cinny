@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import React, { CSSProperties, ReactNode } from 'react';
 import { Box, Chip, Icon, Icons, Text, toRem } from 'folds';
 import { IContent } from 'matrix-js-sdk';
 import { JUMBO_EMOJI_REG, URL_REG } from '../../utils/regex';
@@ -28,7 +28,7 @@ import {
 import { FALLBACK_MIMETYPE, getBlobSafeMimeType } from '../../utils/mimeTypes';
 import { parseGeoUri, scaleYDimension } from '../../utils/common';
 import { Attachment, AttachmentBox, AttachmentContent, AttachmentHeader } from './attachment';
-import { FileHeader } from './FileHeader';
+import { FileHeader, FileDownloadButton } from './FileHeader';
 
 export function MBadEncrypted() {
   return (
@@ -74,8 +74,9 @@ type MTextProps = {
   content: Record<string, unknown>;
   renderBody: (props: RenderBodyProps) => ReactNode;
   renderUrlsPreview?: (urls: string[]) => ReactNode;
+  style?: CSSProperties;
 };
-export function MText({ edited, content, renderBody, renderUrlsPreview }: MTextProps) {
+export function MText({ edited, content, renderBody, renderUrlsPreview, style }: MTextProps) {
   const { body, formatted_body: customBody } = content;
 
   if (typeof body !== 'string') return <BrokenContent />;
@@ -88,6 +89,7 @@ export function MText({ edited, content, renderBody, renderUrlsPreview }: MTextP
       <MessageTextBody
         preWrap={typeof customBody !== 'string'}
         jumboEmoji={JUMBO_EMOJI_REG.test(trimmedBody)}
+        style={style}
       >
         {renderBody({
           body: trimmedBody,
@@ -243,8 +245,24 @@ export function MVideo({ content, renderAsFile, renderVideoContent, outlined }: 
 
   const height = scaleYDimension(videoInfo.w || 400, 400, videoInfo.h || 400);
 
+  const filename = content.filename ?? content.body ?? 'Video';
+
   return (
     <Attachment outlined={outlined}>
+      <AttachmentHeader>
+        <FileHeader
+          body={filename}
+          mimeType={safeMimeType}
+          after={
+            <FileDownloadButton
+              filename={filename}
+              url={mxcUrl}
+              mimeType={safeMimeType}
+              encInfo={content.file}
+            />
+          }
+        />
+      </AttachmentHeader>
       <AttachmentBox
         style={{
           height: toRem(height < 48 ? 48 : height),
@@ -286,10 +304,22 @@ export function MAudio({ content, renderAsFile, renderAudioContent, outlined }: 
     return <BrokenContent />;
   }
 
+  const filename = content.filename ?? content.body ?? 'Audio';
   return (
     <Attachment outlined={outlined}>
       <AttachmentHeader>
-        <FileHeader body={content.filename ?? content.body ?? 'Audio'} mimeType={safeMimeType} />
+        <FileHeader
+          body={filename}
+          mimeType={safeMimeType}
+          after={
+            <FileDownloadButton
+              filename={filename}
+              url={mxcUrl}
+              mimeType={safeMimeType}
+              encInfo={content.file}
+            />
+          }
+        />
       </AttachmentHeader>
       <AttachmentBox>
         <AttachmentContent>

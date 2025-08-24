@@ -4,7 +4,6 @@ import React, {
   forwardRef,
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -100,13 +99,7 @@ import {
   getImageMsgContent,
   getVideoMsgContent,
 } from './msgContent';
-import colorMXID from '../../../util/colorMXID';
-import {
-  getAllParents,
-  getMemberDisplayName,
-  getMentionContent,
-  trimReplyFromBody,
-} from '../../utils/room';
+import { getMemberDisplayName, getMentionContent, trimReplyFromBody } from '../../utils/room';
 import { CommandAutocomplete } from './CommandAutocomplete';
 import { Command, SHRUG, TABLEFLIP, UNFLIP, useCommands } from '../../hooks/useCommands';
 import { mobileOrTablet } from '../../utils/user-agent';
@@ -114,6 +107,15 @@ import { useElementSizeObserver } from '../../hooks/useElementSizeObserver';
 import { ReplyLayout, ThreadIndicator } from '../../components/message';
 import { roomToParentsAtom } from '../../state/room/roomToParents';
 import { useMediaAuthentication } from '../../hooks/useMediaAuthentication';
+import { useImagePackRooms } from '../../hooks/useImagePackRooms';
+import { usePowerLevelsContext } from '../../hooks/usePowerLevels';
+import colorMXID from '../../../util/colorMXID';
+import { useIsDirectRoom } from '../../hooks/useRoom';
+import { useAccessiblePowerTagColors, useGetMemberPowerTag } from '../../hooks/useMemberPowerTag';
+import { useRoomCreators } from '../../hooks/useRoomCreators';
+import { useTheme } from '../../hooks/useTheme';
+import { useRoomCreatorsTag } from '../../hooks/useRoomCreatorsTag';
+import { usePowerLevelTags } from '../../hooks/usePowerLevelTags';
 
 interface RoomInputProps {
   editor: Editor;
@@ -128,12 +130,35 @@ export const RoomInput = forwardRef<HTMLDivElement, RoomInputProps>(
     const [enterForNewline] = useSetting(settingsAtom, 'enterForNewline');
     const [isMarkdown] = useSetting(settingsAtom, 'isMarkdown');
     const [hideActivity] = useSetting(settingsAtom, 'hideActivity');
+    const [legacyUsernameColor] = useSetting(settingsAtom, 'legacyUsernameColor');
+    const direct = useIsDirectRoom();
     const commands = useCommands(mx, room);
     const emojiBtnRef = useRef<HTMLButtonElement>(null);
     const roomToParents = useAtomValue(roomToParentsAtom);
+    const powerLevels = usePowerLevelsContext();
+    const creators = useRoomCreators(room);
 
     const [msgDraft, setMsgDraft] = useAtom(roomIdToMsgDraftAtomFamily(roomId));
     const [replyDraft, setReplyDraft] = useAtom(roomIdToReplyDraftAtomFamily(roomId));
+    const replyUserID = replyDraft?.userId;
+
+    const powerLevelTags = usePowerLevelTags(room, powerLevels);
+    const creatorsTag = useRoomCreatorsTag();
+    const getMemberPowerTag = useGetMemberPowerTag(room, creators, powerLevels);
+    const theme = useTheme();
+    const accessibleTagColors = useAccessiblePowerTagColors(
+      theme.kind,
+      creatorsTag,
+      powerLevelTags
+    );
+
+    const replyPowerTag = replyUserID ? getMemberPowerTag(replyUserID) : undefined;
+    const replyPowerColor = replyPowerTag?.color
+      ? accessibleTagColors.get(replyPowerTag.color)
+      : undefined;
+    const replyUsernameColor =
+      legacyUsernameColor || direct ? colorMXID(replyUserID ?? '') : replyPowerColor;
+
     const [uploadBoard, setUploadBoard] = useState(true);
     const [selectedFiles, setSelectedFiles] = useAtom(roomIdToUploadItemsAtomFamily(roomId));
     const uploadFamilyObserverAtom = createUploadFamilyObserverAtom(
@@ -142,14 +167,7 @@ export const RoomInput = forwardRef<HTMLDivElement, RoomInputProps>(
     );
     const uploadBoardHandlers = useRef<UploadBoardImperativeHandlers>();
 
-    const imagePackRooms: Room[] = useMemo(() => {
-      const allParentSpaces = [roomId].concat(Array.from(getAllParents(roomToParents, roomId)));
-      return allParentSpaces.reduce<Room[]>((list, rId) => {
-        const r = mx.getRoom(rId);
-        if (r) list.push(r);
-        return list;
-      }, []);
-    }, [mx, roomId, roomToParents]);
+    const imagePackRooms: Room[] = useImagePackRooms(roomId, roomToParents);
 
     const [toolbar, setToolbar] = useSetting(settingsAtom, 'editorToolbar');
     const [autocompleteQuery, setAutocompleteQuery] =
@@ -272,7 +290,7 @@ export const RoomInput = forwardRef<HTMLDivElement, RoomInputProps>(
       });
       handleCancelUpload(uploads);
       const contents = fulfilledPromiseSettledResult(await Promise.allSettled(contentsPromises));
-      contents.forEach((content) => mx.sendMessage(roomId, content));
+      contents.forEach((content) => mx.sendMessage(roomId, content as any));
     };
 
     const submit = useCallback(() => {
@@ -351,7 +369,7 @@ export const RoomInput = forwardRef<HTMLDivElement, RoomInputProps>(
           content['m.relates_to'].is_falling_back = false;
         }
       }
-      mx.sendMessage(roomId, content);
+      mx.sendMessage(roomId, content as any);
       resetEditor(editor);
       resetEditorHistory(editor);
       setReplyDraft(undefined);
@@ -360,7 +378,10 @@ export const RoomInput = forwardRef<HTMLDivElement, RoomInputProps>(
 
     const handleKeyDown: KeyboardEventHandler = useCallback(
       (evt) => {
-        if (isKeyHotkey('mod+enter', evt) || (!enterForNewline && isKeyHotkey('enter', evt))) {
+        if (
+          (isKeyHotkey('mod+enter', evt) || (!enterForNewline && isKeyHotkey('enter', evt))) &&
+          !evt.nativeEvent.isComposing
+        ) {
           evt.preventDefault();
           submit();
         }
@@ -535,10 +556,10 @@ export const RoomInput = forwardRef<HTMLDivElement, RoomInputProps>(
                   >
                     <Icon src={Icons.Cross} size="50" />
                   </IconButton>
-                  <Box direction="Column">
+                  <Box direction="Row" gap="200" alignItems="Center">
                     {replyDraft.relation?.rel_type === RelationType.Thread && <ThreadIndicator />}
                     <ReplyLayout
-                      userColor={colorMXID(replyDraft.userId)}
+                      userColor={replyUsernameColor}
                       username={
                         <Text size="T300" truncate>
                           <b>
