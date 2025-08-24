@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { as, Box, Text, config, Button, Menu, Spinner } from 'folds';
+import * as zip from '@zip.js/zip.js';
 import {
   ImagePack,
   ImageUsage,
@@ -22,7 +23,7 @@ import { UploadSuccess } from '../../state/upload';
 import { getImageInfo, TUploadContent } from '../../utils/matrix';
 import { getImageFileUrl, loadImageElement, renameFile } from '../../utils/dom';
 import { replaceSpaceWithDash, suffixRename } from '../../utils/common';
-import { getFileNameWithoutExt } from '../../utils/mimeTypes';
+import { getFileNameExt, getFileNameWithoutExt } from '../../utils/mimeTypes';
 import { AsyncStatus, useAsyncCallback } from '../../hooks/useAsyncCallback';
 
 export type ImagePackContentProps = {
@@ -62,8 +63,42 @@ export const ImagePackContent = as<'div', ImagePackContentProps>(
 
     const pickFiles = useFilePicker(
       useCallback(
-        (pickedFiles: File[]) => {
-          const uniqueFiles = pickedFiles.map((file) => {
+        async (pickedFiles: File[]) => {
+          const flattenedFiles = (
+            await Promise.all(
+              pickedFiles.map(async (file) => {
+                if (
+                  file.name.endsWith('.zip') ||
+                  file.type === 'application/zip' ||
+                  file.type === 'application/x-zip-compressed'
+                ) {
+                  const reader = new zip.ZipReader(new zip.BlobReader(file));
+                  const rawEntries = await reader.getEntries();
+                  return Promise.all(
+                    rawEntries
+                      .filter((entry) =>
+                        zip.getMimeType(getFileNameExt(entry.filename)).startsWith('image/')
+                      )
+                      .map(async (entry) => {
+                        const data = await entry.getData?.(
+                          new zip.BlobWriter(getFileNameExt(entry.filename))
+                        );
+
+                        if (!data) {
+                          return null;
+                        }
+
+                        return new File([data], entry.filename.split('/').pop() || entry.filename);
+                      })
+                  );
+                }
+
+                return [file];
+              })
+            )
+          ).flatMap((subArr) => subArr.flatMap((file) => file || []));
+
+          const uniqueFiles = flattenedFiles.map((file) => {
             const fileName = replaceSpaceWithDash(file.name);
             if (hasImageWithShortcode(fileName)) {
               const uniqueName = suffixRename(fileName, hasImageWithShortcode);
@@ -342,7 +377,7 @@ export const ImagePackContent = as<'div', ImagePackContentProps>(
               >
                 <SettingTile
                   title="Upload Images"
-                  description="Select images from your storage to upload them in pack."
+                  description="Select images (or zips of images) from your storage to upload them in pack."
                   after={
                     <Button
                       variant="Secondary"
@@ -351,7 +386,9 @@ export const ImagePackContent = as<'div', ImagePackContentProps>(
                       radii="300"
                       type="button"
                       outlined
-                      onClick={() => pickFiles('image/*')}
+                      onClick={() =>
+                        pickFiles('image/*,application/zip,application/x-zip-compressed')
+                      }
                     >
                       <Text size="B300">Select</Text>
                     </Button>
