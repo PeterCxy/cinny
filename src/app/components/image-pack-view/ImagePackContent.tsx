@@ -88,7 +88,10 @@ export const ImagePackContent = as<'div', ImagePackContentProps>(
                           return null;
                         }
 
-                        return new File([data], entry.filename.split('/').pop() || entry.filename);
+                        return new File(
+                          [data],
+                          entry.filename.split('/').pop()?.split('.')[0] || entry.filename
+                        );
                       })
                   );
                 }
