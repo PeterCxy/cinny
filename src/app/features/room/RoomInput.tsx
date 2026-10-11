@@ -39,7 +39,7 @@ import {
   AutocompletePrefix,
   AutocompleteQuery,
   getAutocompleteQuery,
-  getPrevWorldRange,
+  getPrevWordRange,
   resetEditor,
   RoomMentionAutocomplete,
   UserMentionAutocomplete,
@@ -116,6 +116,7 @@ import { useRoomCreators } from '../../hooks/useRoomCreators';
 import { useTheme } from '../../hooks/useTheme';
 import { useRoomCreatorsTag } from '../../hooks/useRoomCreatorsTag';
 import { usePowerLevelTags } from '../../hooks/usePowerLevelTags';
+import { useComposingCheck } from '../../hooks/useComposingCheck';
 
 interface RoomInputProps {
   editor: Editor;
@@ -217,8 +218,10 @@ export const RoomInput = forwardRef<HTMLDivElement, RoomInputProps>(
     const dropZoneVisible = useFileDropZone(fileDropContainerRef, handleFiles);
     const [hideStickerBtn, setHideStickerBtn] = useState(document.body.clientWidth < 500);
 
+    const isComposing = useComposingCheck();
+
     useElementSizeObserver(
-      useCallback(() => document.body, []),
+      useCallback(() => fileDropContainerRef.current, [fileDropContainerRef]),
       useCallback((width) => setHideStickerBtn(width < 500), [])
     );
 
@@ -380,7 +383,7 @@ export const RoomInput = forwardRef<HTMLDivElement, RoomInputProps>(
       (evt) => {
         if (
           (isKeyHotkey('mod+enter', evt) || (!enterForNewline && isKeyHotkey('enter', evt))) &&
-          !evt.nativeEvent.isComposing
+          !isComposing(evt)
         ) {
           evt.preventDefault();
           submit();
@@ -394,7 +397,7 @@ export const RoomInput = forwardRef<HTMLDivElement, RoomInputProps>(
           setReplyDraft(undefined);
         }
       },
-      [submit, setReplyDraft, enterForNewline, autocompleteQuery]
+      [submit, setReplyDraft, enterForNewline, autocompleteQuery, isComposing]
     );
 
     const handleKeyUp: KeyboardEventHandler = useCallback(
@@ -408,7 +411,7 @@ export const RoomInput = forwardRef<HTMLDivElement, RoomInputProps>(
           sendTypingStatus(!isEmptyEditor(editor));
         }
 
-        const prevWordRange = getPrevWorldRange(editor);
+        const prevWordRange = getPrevWordRange(editor);
         const query = prevWordRange
           ? getAutocompleteQuery<AutocompletePrefix>(editor, prevWordRange, AUTOCOMPLETE_PREFIXES)
           : undefined;

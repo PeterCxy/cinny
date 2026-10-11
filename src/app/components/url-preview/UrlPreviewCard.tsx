@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { IPreviewUrlResponse } from 'matrix-js-sdk';
 import { Box, Icon, IconButton, Icons, Scroll, Spinner, Text, as, color, config } from 'folds';
+import { ImageOverlay } from '../ImageOverlay';
 import { AsyncStatus, useAsyncCallback } from '../../hooks/useAsyncCallback';
 import { useMatrixClient } from '../../hooks/useMatrixClient';
 import { UrlPreview, UrlPreviewContent, UrlPreviewDescription, UrlPreviewImg } from './UrlPreview';
@@ -12,8 +13,8 @@ import * as css from './UrlPreviewCard.css';
 import { tryDecodeURIComponent } from '../../utils/dom';
 import { mxcUrlToHttp } from '../../utils/matrix';
 import { useMediaAuthentication } from '../../hooks/useMediaAuthentication';
-import { ViewerModal } from '../message/ViewerModal';
 import { ImageViewer } from '../image-viewer';
+import { onEnterOrSpace } from '../../utils/keyboard';
 
 const linkStyles = { color: color.Success.Main };
 
@@ -33,7 +34,7 @@ export const UrlPreviewCard = as<'div', { url: string; ts: number }>(
     if (previewStatus.status === AsyncStatus.Error) return null;
 
     const renderContent = (prev: IPreviewUrlResponse) => {
-      const imgUrl = mxcUrlToHttp(
+      const thumbUrl = mxcUrlToHttp(
         mx,
         prev['og:image'] || '',
         useAuthentication,
@@ -43,22 +44,28 @@ export const UrlPreviewCard = as<'div', { url: string; ts: number }>(
         false
       );
 
+      const imgUrl = mxcUrlToHttp(mx, prev['og:image'] || '', useAuthentication);
+
       return (
         <>
-          {imgUrl && (
+          {thumbUrl && (
             <UrlPreviewImg
-              src={imgUrl}
+              src={thumbUrl}
               alt={prev['og:title']}
               title={prev['og:title']}
+              tabIndex={0}
+              onKeyDown={(evt) => onEnterOrSpace(() => setViewer(true))(evt)}
               onClick={() => setViewer(true)}
             />
           )}
           {imgUrl && (
-            <ViewerModal
+            <ImageOverlay
               src={imgUrl}
               alt={prev['og:title']}
-              open={viewer}
-              requestClose={() => setViewer(false)}
+              viewer={viewer}
+              requestClose={() => {
+                setViewer(false);
+              }}
               renderViewer={(p) => <ImageViewer {...p} />}
             />
           )}
@@ -69,7 +76,7 @@ export const UrlPreviewCard = as<'div', { url: string; ts: number }>(
               as="a"
               href={url}
               target="_blank"
-              rel="no-referrer"
+              rel="noreferrer"
               size="T200"
               priority="300"
             >

@@ -1,7 +1,13 @@
 import { atom } from 'jotai';
 
 const STORAGE_KEY = 'settings';
-export type DateFormat = 'D MMM YYYY' | 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY/MM/DD' | '';
+export type DateFormat =
+  | 'D MMM YYYY'
+  | 'DD/MM/YYYY'
+  | 'MM/DD/YYYY'
+  | 'YYYY/MM/DD'
+  | 'YYYY-MM-DD'
+  | '';
 export type MessageSpacing = '0' | '100' | '200' | '300' | '400' | '500';
 export enum MessageLayout {
   Modern = 0,
@@ -14,6 +20,7 @@ export interface Settings {
   useSystemTheme: boolean;
   lightThemeId?: string;
   darkThemeId?: string;
+  monochromeMode?: boolean;
   isMarkdown: boolean;
   editorToolbar: boolean;
   twitterEmoji: boolean;
@@ -47,6 +54,7 @@ const defaultSettings: Settings = {
   useSystemTheme: true,
   lightThemeId: undefined,
   darkThemeId: undefined,
+  monochromeMode: false,
   isMarkdown: true,
   editorToolbar: false,
   twitterEmoji: false,

@@ -94,7 +94,7 @@ import {
   getIntersectionObserverEntry,
   useIntersectionObserver,
 } from '../../hooks/useIntersectionObserver';
-import { markAsRead } from '../../../client/action/notifications';
+import { markAsRead } from '../../utils/notifications';
 import { useDebounce } from '../../hooks/useDebounce';
 import { getResizeObserverEntry, useResizeObserver } from '../../hooks/useResizeObserver';
 import * as css from './RoomTimeline.css';
@@ -471,6 +471,7 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
   const permissions = useRoomPermissions(creators, powerLevels);
 
   const canRedact = permissions.action('redact', mx.getSafeUserId());
+  const canDeleteOwn = permissions.event(MessageEvent.RoomRedaction, mx.getSafeUserId());
   const canSendReaction = permissions.event(MessageEvent.Reaction, mx.getSafeUserId());
   const canPinEvent = permissions.stateEvent(StateEvent.RoomPinnedEvents, mx.getSafeUserId());
   const [editId, setEditId] = useState<string>();
@@ -1047,7 +1048,7 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
             collapse={collapse}
             highlight={highlighted}
             edit={editId === mEventId}
-            canDelete={canRedact || mEvent.getSender() === mx.getUserId()}
+            canDelete={canRedact || (canDeleteOwn && mEvent.getSender() === mx.getUserId())}
             canSendReaction={canSendReaction}
             canPinEvent={canPinEvent}
             imagePackRooms={imagePackRooms}
@@ -1129,7 +1130,7 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
             collapse={collapse}
             highlight={highlighted}
             edit={editId === mEventId}
-            canDelete={canRedact || mEvent.getSender() === mx.getUserId()}
+            canDelete={canRedact || (canDeleteOwn && mEvent.getSender() === mx.getUserId())}
             canSendReaction={canSendReaction}
             canPinEvent={canPinEvent}
             imagePackRooms={imagePackRooms}
@@ -1247,7 +1248,7 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
             messageLayout={messageLayout}
             collapse={collapse}
             highlight={highlighted}
-            canDelete={canRedact || mEvent.getSender() === mx.getUserId()}
+            canDelete={canRedact || (canDeleteOwn && mEvent.getSender() === mx.getUserId())}
             canSendReaction={canSendReaction}
             canPinEvent={canPinEvent}
             imagePackRooms={imagePackRooms}
@@ -1461,6 +1462,57 @@ export function RoomTimeline({ room, eventId, roomInputRef, editor }: RoomTimeli
                   <Text size="T300" priority="300">
                     <b>{senderName}</b>
                     {' changed room avatar'}
+                  </Text>
+                </Box>
+              }
+            />
+          </Event>
+        );
+      },
+      [StateEvent.GroupCallMemberPrefix]: (mEventId, mEvent, item) => {
+        const highlighted = focusItem?.index === item && focusItem.highlight;
+        const senderId = mEvent.getSender() ?? '';
+        const senderName = getMemberDisplayName(room, senderId) || getMxIdLocalPart(senderId);
+
+        const content = mEvent.getContent();
+        const prevContent = mEvent.getPrevContent();
+
+        const callJoined = content.application;
+        if (callJoined && 'application' in prevContent) {
+          return null;
+        }
+
+        const timeJSX = (
+          <Time
+            ts={mEvent.getTs()}
+            compact={messageLayout === MessageLayout.Compact}
+            hour24Clock={hour24Clock}
+            dateFormatString={dateFormatString}
+          />
+        );
+
+        return (
+          <Event
+            key={mEvent.getId()}
+            data-message-item={item}
+            data-message-id={mEventId}
+            room={room}
+            mEvent={mEvent}
+            highlight={highlighted}
+            messageSpacing={messageSpacing}
+            canDelete={canRedact || mEvent.getSender() === mx.getUserId()}
+            hideReadReceipts={hideActivity}
+            showDeveloperTools={showDeveloperTools}
+          >
+            <EventContent
+              messageLayout={messageLayout}
+              time={timeJSX}
+              iconSrc={callJoined ? Icons.Phone : Icons.PhoneDown}
+              content={
+                <Box grow="Yes" direction="Column">
+                  <Text size="T300" priority="300">
+                    <b>{senderName}</b>
+                    {callJoined ? ' joined the call' : ' ended the call'}
                   </Text>
                 </Box>
               }

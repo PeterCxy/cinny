@@ -224,6 +224,8 @@ type RenderVideoContentProps = {
   mimeType: string;
   url: string;
   encInfo?: IEncryptedFile;
+  markedAsSpoiler?: boolean;
+  spoilerReason?: string;
 };
 type MVideoProps = {
   content: IVideoContent;
@@ -274,6 +276,8 @@ export function MVideo({ content, renderAsFile, renderVideoContent, outlined }: 
           mimeType: safeMimeType,
           url: mxcUrl,
           encInfo: content.file,
+          markedAsSpoiler: content[MATRIX_SPOILER_PROPERTY_NAME],
+          spoilerReason: content[MATRIX_SPOILER_REASON_PROPERTY_NAME],
         })}
       </AttachmentBox>
     </Attachment>
@@ -385,6 +389,8 @@ export function MLocation({ content }: MLocationProps) {
   const geoUri = content.geo_uri;
   if (typeof geoUri !== 'string') return <BrokenContent />;
   const location = parseGeoUri(geoUri);
+  if (!location) return <BrokenContent />;
+
   return (
     <Box direction="Column" alignItems="Start" gap="100">
       <Text size="T400">{geoUri}</Text>

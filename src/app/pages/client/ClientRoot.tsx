@@ -23,21 +23,19 @@ import {
   logoutClient,
   startClient,
 } from '../../../client/initMatrix';
-import { getSecret } from '../../../client/state/auth';
 import { SplashScreen } from '../../components/splash-screen';
 import { ServerConfigsLoader } from '../../components/ServerConfigsLoader';
 import { CapabilitiesProvider } from '../../hooks/useCapabilities';
 import { MediaConfigProvider } from '../../hooks/useMediaConfig';
 import { MatrixClientProvider } from '../../hooks/useMatrixClient';
 import { SpecVersions } from './SpecVersions';
-import Windows from '../../organisms/pw/Windows';
-import Dialogs from '../../organisms/pw/Dialogs';
-import ReusableContextMenu from '../../atoms/context-menu/ReusableContextMenu';
 import { AsyncStatus, useAsyncCallback } from '../../hooks/useAsyncCallback';
 import { useSyncState } from '../../hooks/useSyncState';
 import { stopPropagation } from '../../utils/keyboard';
 import { SyncStatus } from './SyncStatus';
 import { AuthMetadataProvider } from '../../hooks/useAuthMetadata';
+import { getFallbackSession } from '../../state/sessions';
+import { AutoDiscovery } from './AutoDiscovery';
 
 function ClientRootLoading() {
   return (
@@ -146,10 +144,16 @@ type ClientRootProps = {
 };
 export function ClientRoot({ children }: ClientRootProps) {
   const [loading, setLoading] = useState(true);
-  const { baseUrl } = getSecret();
+  const { baseUrl, userId } = getFallbackSession() ?? {};
 
   const [loadState, loadMatrix] = useAsyncCallback<MatrixClient, Error, []>(
-    useCallback(() => initClient(getSecret() as any), [])
+    useCallback(() => {
+      const session = getFallbackSession();
+      if (!session) {
+        throw new Error('No session Found!');
+      }
+      return initClient(session);
+    }, [])
   );
   const mx = loadState.status === AsyncStatus.Success ? loadState.data : undefined;
   const [startState, startMatrix] = useAsyncCallback<void, Error, [MatrixClient]>(
@@ -180,50 +184,55 @@ export function ClientRoot({ children }: ClientRootProps) {
   );
 
   return (
-    <SpecVersions baseUrl={baseUrl!}>
-      {mx && <SyncStatus mx={mx} />}
-      {loading && <ClientRootOptions mx={mx} />}
-      {(loadState.status === AsyncStatus.Error || startState.status === AsyncStatus.Error) && (
-        <SplashScreen>
-          <Box direction="Column" grow="Yes" alignItems="Center" justifyContent="Center" gap="400">
-            <Dialog>
-              <Box direction="Column" gap="400" style={{ padding: config.space.S400 }}>
-                {loadState.status === AsyncStatus.Error && (
-                  <Text>{`Failed to load. ${loadState.error.message}`}</Text>
-                )}
-                {startState.status === AsyncStatus.Error && (
-                  <Text>{`Failed to start. ${startState.error.message}`}</Text>
-                )}
-                <Button variant="Critical" onClick={mx ? () => startMatrix(mx) : loadMatrix}>
-                  <Text as="span" size="B400">
-                    Retry
-                  </Text>
-                </Button>
-              </Box>
-            </Dialog>
-          </Box>
-        </SplashScreen>
-      )}
-      {loading || !mx ? (
-        <ClientRootLoading />
-      ) : (
-        <MatrixClientProvider value={mx}>
-          <ServerConfigsLoader>
-            {(serverConfigs) => (
-              <CapabilitiesProvider value={serverConfigs.capabilities ?? {}}>
-                <MediaConfigProvider value={serverConfigs.mediaConfig ?? {}}>
-                  <AuthMetadataProvider value={serverConfigs.authMetadata}>
-                    {children}
-                    <Windows />
-                    <Dialogs />
-                    <ReusableContextMenu />
-                  </AuthMetadataProvider>
-                </MediaConfigProvider>
-              </CapabilitiesProvider>
-            )}
-          </ServerConfigsLoader>
-        </MatrixClientProvider>
-      )}
-    </SpecVersions>
+    <AutoDiscovery userId={userId!} baseUrl={baseUrl!}>
+      <SpecVersions baseUrl={baseUrl!}>
+        {mx && <SyncStatus mx={mx} />}
+        {loading && <ClientRootOptions mx={mx} />}
+        {(loadState.status === AsyncStatus.Error || startState.status === AsyncStatus.Error) && (
+          <SplashScreen>
+            <Box
+              direction="Column"
+              grow="Yes"
+              alignItems="Center"
+              justifyContent="Center"
+              gap="400"
+            >
+              <Dialog>
+                <Box direction="Column" gap="400" style={{ padding: config.space.S400 }}>
+                  {loadState.status === AsyncStatus.Error && (
+                    <Text>{`Failed to load. ${loadState.error.message}`}</Text>
+                  )}
+                  {startState.status === AsyncStatus.Error && (
+                    <Text>{`Failed to start. ${startState.error.message}`}</Text>
+                  )}
+                  <Button variant="Critical" onClick={mx ? () => startMatrix(mx) : loadMatrix}>
+                    <Text as="span" size="B400">
+                      Retry
+                    </Text>
+                  </Button>
+                </Box>
+              </Dialog>
+            </Box>
+          </SplashScreen>
+        )}
+        {loading || !mx ? (
+          <ClientRootLoading />
+        ) : (
+          <MatrixClientProvider value={mx}>
+            <ServerConfigsLoader>
+              {(serverConfigs) => (
+                <CapabilitiesProvider value={serverConfigs.capabilities ?? {}}>
+                  <MediaConfigProvider value={serverConfigs.mediaConfig ?? {}}>
+                    <AuthMetadataProvider value={serverConfigs.authMetadata}>
+                      {children}
+                    </AuthMetadataProvider>
+                  </MediaConfigProvider>
+                </CapabilitiesProvider>
+              )}
+            </ServerConfigsLoader>
+          </MatrixClientProvider>
+        )}
+      </SpecVersions>
+    </AutoDiscovery>
   );
 }

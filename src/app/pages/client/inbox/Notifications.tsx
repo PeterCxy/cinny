@@ -73,7 +73,7 @@ import * as customHtmlCss from '../../../styles/CustomHtml.css';
 import { useRoomNavigate } from '../../../hooks/useRoomNavigate';
 import { useRoomUnread } from '../../../state/hooks/unread';
 import { roomToUnreadAtom } from '../../../state/room/roomToUnread';
-import { markAsRead } from '../../../../client/action/notifications';
+import { markAsRead } from '../../../utils/notifications';
 import { ContainerColor } from '../../../styles/ContainerColor.css';
 import { VirtualTile } from '../../../components/virtualizer';
 import { UserAvatar } from '../../../components/user-avatar';
@@ -417,7 +417,12 @@ function RoomNotificationsGroupComp({
               src={getRoomAvatarUrl(mx, room, 96, useAuthentication)}
               alt={room.name}
               renderFallback={() => (
-                <RoomIcon size="50" joinRule={room.getJoinRule() ?? JoinRule.Restricted} filled />
+                <RoomIcon
+                  size="50"
+                  roomType={room.getType()}
+                  joinRule={room.getJoinRule() ?? JoinRule.Restricted}
+                  filled
+                />
               )}
             />
           </Avatar>

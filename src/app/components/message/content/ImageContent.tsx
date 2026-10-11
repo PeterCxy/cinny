@@ -23,7 +23,7 @@ import { bytesToSize } from '../../../utils/common';
 import { FALLBACK_MIMETYPE } from '../../../utils/mimeTypes';
 import { decryptFile, downloadEncryptedMedia, mxcUrlToHttp } from '../../../utils/matrix';
 import { useMediaAuthentication } from '../../../hooks/useMediaAuthentication';
-import { RenderViewerProps, ViewerModal } from '../ViewerModal';
+import { ImageOverlay, RenderViewerProps } from '../../ImageOverlay';
 import { validBlurHash } from '../../../utils/blurHash';
 
 type RenderImageProps = {
@@ -76,7 +76,8 @@ export const ImageContent = as<'div', ImageContentProps>(
 
     const [srcState, loadSrc] = useAsyncCallback(
       useCallback(async () => {
-        const mediaUrl = mxcUrlToHttp(mx, url, useAuthentication) ?? url;
+        const mediaUrl = mxcUrlToHttp(mx, url, useAuthentication);
+        if (!mediaUrl) throw new Error('Invalid media URL');
         if (encInfo) {
           const fileContent = await downloadEncryptedMedia(mediaUrl, (encBuf) =>
             decryptFile(encBuf, mimeType ?? FALLBACK_MIMETYPE, encInfo)
@@ -107,10 +108,10 @@ export const ImageContent = as<'div', ImageContentProps>(
     return (
       <Box className={classNames(css.RelativeBase, className)} {...props} ref={ref}>
         {srcState.status === AsyncStatus.Success && (
-          <ViewerModal
+          <ImageOverlay
             src={srcState.data}
             alt={body}
-            open={viewer}
+            viewer={viewer}
             requestClose={() => setViewer(false)}
             renderViewer={renderViewer}
           />
@@ -186,7 +187,7 @@ export const ImageContent = as<'div', ImageContentProps>(
         )}
         {(srcState.status === AsyncStatus.Loading || srcState.status === AsyncStatus.Success) &&
           !load &&
-          !markedAsSpoiler && (
+          !blurred && (
             <Box className={css.AbsoluteContainer} alignItems="Center" justifyContent="Center">
               <Spinner variant="Secondary" />
             </Box>

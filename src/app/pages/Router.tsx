@@ -30,7 +30,6 @@ import {
   _SERVER_PATH,
   CREATE_PATH,
 } from './paths';
-import { isAuthenticated } from '../../client/state/auth';
 import {
   getAppPathFromHref,
   getExploreFeaturedPath,
@@ -67,6 +66,10 @@ import { CreateRoomModalRenderer } from '../features/create-room';
 import { HomeCreateRoom } from './client/home/CreateRoom';
 import { Create } from './client/create';
 import { CreateSpaceModalRenderer } from '../features/create-space';
+import { SearchModalRenderer } from '../features/search';
+import { getFallbackSession } from '../state/sessions';
+import { CallStatusRenderer } from './CallStatusRenderer';
+import { CallEmbedProvider } from '../components/CallEmbedProvider';
 
 export const createRouter = (clientConfig: ClientConfig, screenSize: ScreenSize) => {
   const { hashRouter } = clientConfig;
@@ -77,7 +80,7 @@ export const createRouter = (clientConfig: ClientConfig, screenSize: ScreenSize)
       <Route
         index
         loader={() => {
-          if (isAuthenticated()) return redirect(getHomePath());
+          if (getFallbackSession()) return redirect(getHomePath());
           const afterLoginPath = getAppPathFromHref(getOriginBaseUrl(), window.location.href);
           if (afterLoginPath) setAfterLoginRedirectPath(afterLoginPath);
           return redirect(getLoginPath());
@@ -85,7 +88,7 @@ export const createRouter = (clientConfig: ClientConfig, screenSize: ScreenSize)
       />
       <Route
         loader={() => {
-          if (isAuthenticated()) {
+          if (getFallbackSession()) {
             return redirect(getHomePath());
           }
 
@@ -105,7 +108,8 @@ export const createRouter = (clientConfig: ClientConfig, screenSize: ScreenSize)
 
       <Route
         loader={() => {
-          if (!isAuthenticated()) {
+          const session = getFallbackSession();
+          if (!session) {
             const afterLoginPath = getAppPathFromHref(
               getOriginBaseUrl(hashRouter),
               window.location.href
@@ -122,15 +126,19 @@ export const createRouter = (clientConfig: ClientConfig, screenSize: ScreenSize)
                 <ClientRoomsNotificationPreferences>
                   <ClientBindAtoms>
                     <ClientNonUIFeatures>
-                      <ClientLayout
-                        nav={
-                          <MobileFriendlyClientNav>
-                            <SidebarNav />
-                          </MobileFriendlyClientNav>
-                        }
-                      >
-                        <Outlet />
-                      </ClientLayout>
+                      <CallEmbedProvider>
+                        <ClientLayout
+                          nav={
+                            <MobileFriendlyClientNav>
+                              <SidebarNav />
+                            </MobileFriendlyClientNav>
+                          }
+                        >
+                          <Outlet />
+                        </ClientLayout>
+                        <CallStatusRenderer />
+                      </CallEmbedProvider>
+                      <SearchModalRenderer />
                       <UserRoomProfileRenderer />
                       <CreateRoomModalRenderer />
                       <CreateSpaceModalRenderer />
