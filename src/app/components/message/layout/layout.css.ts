@@ -1,4 +1,4 @@
-import { createVar, keyframes, style, styleVariants } from '@vanilla-extract/css';
+import { createVar, globalStyle, keyframes, style, styleVariants } from '@vanilla-extract/css';
 import { recipe, RecipeVariants } from '@vanilla-extract/recipes';
 import { DefaultReset, color, config, toRem } from 'folds';
 
@@ -178,6 +178,24 @@ export const BubbleLeftArrow = style({
   top: 0,
   left: toRem(-8),
   zIndex: 1,
+});
+
+// The tail is an inline <svg> whose <path> hardcodes `fill` to
+// SurfaceVariant.Container. Every theme defines
+// Surface.ContainerHover === SurfaceVariant.Container (e.g. #333333 in dark,
+// #504945 in gruvbox), so while the row is hovered the tail ends up the same
+// colour as the row behind it and no longer matches the bubble - it looks like
+// the highlight is painting over it. Keep the tail on the same state machine as
+// BubbleContent above.
+//
+// A CSS `fill` always beats the `fill` presentation attribute, so these win
+// without touching Bubble.tsx. `globalStyle` is required because vanilla-extract
+// only allows a `style` block to target its own class, not a descendant element.
+globalStyle(`${HoverHighlight}:hover ${BubbleLeftArrow} path`, {
+  fill: color.SurfaceVariant.ContainerHover,
+});
+globalStyle(`${SelectedVariant.true} ${BubbleLeftArrow} path`, {
+  fill: color.SurfaceVariant.ContainerActive,
 });
 
 export const Username = style({
